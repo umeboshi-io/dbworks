@@ -41,32 +41,6 @@ pub async fn list_saved_connections(pool: &PgPool) -> anyhow::Result<Vec<SavedCo
     Ok(rows)
 }
 
-pub async fn list_saved_connections_by_org(
-    pool: &PgPool,
-    org_id: &Uuid,
-) -> anyhow::Result<Vec<SavedConnectionRow>> {
-    let rows = sqlx::query_as::<_, SavedConnectionRow>(
-        "SELECT * FROM saved_connections WHERE organization_id = $1 ORDER BY created_at",
-    )
-    .bind(org_id)
-    .fetch_all(pool)
-    .await?;
-    Ok(rows)
-}
-
-pub async fn list_saved_connections_by_user(
-    pool: &PgPool,
-    user_id: &Uuid,
-) -> anyhow::Result<Vec<SavedConnectionRow>> {
-    let rows = sqlx::query_as::<_, SavedConnectionRow>(
-        "SELECT * FROM saved_connections WHERE owner_user_id = $1 ORDER BY created_at",
-    )
-    .bind(user_id)
-    .fetch_all(pool)
-    .await?;
-    Ok(rows)
-}
-
 pub async fn delete_saved_connection(pool: &PgPool, conn_id: &Uuid) -> anyhow::Result<bool> {
     let result = sqlx::query("DELETE FROM saved_connections WHERE id = $1")
         .bind(conn_id)
