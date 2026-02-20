@@ -239,6 +239,18 @@ pub async fn resolve_connection_permission(
         return Ok((PermissionLevel::Admin, true));
     }
 
+    // 1.5. Connection owner → full access
+    let is_owner = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM saved_connections WHERE id = $1 AND owner_user_id = $2)",
+    )
+    .bind(conn_id)
+    .bind(user.id)
+    .fetch_one(pool)
+    .await?;
+    if is_owner {
+        return Ok((PermissionLevel::Admin, true));
+    }
+
     // 2. Check user-level permission
     let user_perm = sqlx::query_as::<_, UserConnectionPermission>(
         "SELECT * FROM user_connection_permissions WHERE user_id = $1 AND connection_id = $2",
