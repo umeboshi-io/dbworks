@@ -1,4 +1,4 @@
-.PHONY: help up down db backend frontend dev build clean lint
+.PHONY: help up down db db-reset backend frontend dev build clean lint
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -14,6 +14,10 @@ down: ## Stop PostgreSQL (docker compose down)
 
 db: up ## Connect to PostgreSQL via psql
 	docker compose exec postgres psql -U dbworks -d dbworks_dev
+
+db-reset: down ## Reset database (destroy volume and re-create)
+	docker volume rm dbworks_pgdata || true
+	$(MAKE) up
 
 # ---------------------------------------------------------------------------
 # Backend (Rust / Axum)

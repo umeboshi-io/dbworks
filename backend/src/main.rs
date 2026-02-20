@@ -40,6 +40,13 @@ async fn main() {
         .expect("Failed to connect to app database");
     tracing::info!("Connected to app database");
 
+    // Run migrations
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .expect("Failed to run database migrations");
+    tracing::info!("Database migrations applied");
+
     // Initialize encryptor
     let encryptor = match Encryptor::from_env() {
         Ok(e) => {
