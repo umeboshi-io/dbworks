@@ -63,4 +63,5 @@ pub struct ConnectionInfo {
     #[serde(skip_serializing)]
     pub password: String,
     pub organization_id: Option<Uuid>,
+    pub owner_user_id: Option<Uuid>,
 }

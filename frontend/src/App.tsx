@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ConnectionPage from './pages/ConnectionPage';
 import OrganizationPage from './pages/OrganizationPage';
 import TablePage from './pages/TablePage';
 import LoginPage from './pages/LoginPage';
+import OrgSelector from './components/OrgSelector';
+import type { Scope } from './components/OrgSelector';
 import { useAuth } from './AuthContext';
 import { api } from './api/client';
 import type { Connection, TableInfo, Organization } from './types';
@@ -19,15 +21,16 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [connectionsOpen, setConnectionsOpen] = useState(true);
   const [tablesOpen, setTablesOpen] = useState(true);
+  const [scope, setScope] = useState<Scope>('personal');
 
-  const loadConnections = async () => {
+  const loadConnections = useCallback(async (s: Scope) => {
     try {
-      const data = await api.listConnections();
+      const data = await api.listConnections(s);
       setConnections(data);
     } catch (err) {
       console.error('Failed to load connections:', err);
     }
-  };
+  }, []);
 
   const loadTables = async (connId: string) => {
     try {
@@ -39,8 +42,8 @@ function App() {
   };
 
   useEffect(() => {
-    loadConnections();
-  }, []);
+    loadConnections(scope);
+  }, [scope, loadConnections]);
 
   useEffect(() => {
     if (activeConnection) {
@@ -59,6 +62,12 @@ function App() {
 
   const handleOrgJoined = (_org: Organization) => {
     setShowOrgPage(false);
+  };
+
+  const handleScopeChange = (newScope: Scope) => {
+    setScope(newScope);
+    setActiveConnection(null);
+    setActiveTable(null);
   };
 
   const handleDeleteConnection = async (connId: string) => {
@@ -123,21 +132,15 @@ function App() {
                 <span className="user-name">{user.name}</span>
                 <span className="user-email">{user.email}</span>
               </div>
-              <button
-                className="btn-icon"
-                onClick={() => { setShowOrgPage(true); setShowConnectionForm(false); }}
-                title="Organizations"
-              >
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                  <rect x="2" y="4" width="16" height="14" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                  <path d="M7 4V2.5A1.5 1.5 0 0 1 8.5 1h3A1.5 1.5 0 0 1 13 2.5V4" stroke="currentColor" strokeWidth="1.5" />
-                  <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
+              <button className="btn-icon" onClick={() => { setShowOrgPage(true); setShowConnectionForm(false); }} title="Manage Organizations">
+                ⚙
               </button>
               <button className="btn-icon" onClick={logout} title="ログアウト">
                 ⏻
               </button>
             </div>
+            {/* Org selector */}
+            <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
             {/* Connections */}
             <div className="sidebar-section">
               <div className="section-header" onClick={() => setConnectionsOpen(!connectionsOpen)} style={{ cursor: 'pointer' }}>

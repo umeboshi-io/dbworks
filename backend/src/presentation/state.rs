@@ -95,6 +95,7 @@ impl ConnectionManager {
                         user: row.username.clone(),
                         password,
                         organization_id: row.organization_id,
+                        owner_user_id: row.owner_user_id,
                     };
                     let entry = ConnectionEntry {
                         info,
@@ -175,6 +176,7 @@ impl ConnectionManager {
             user,
             password: password.clone(),
             organization_id,
+            owner_user_id,
         };
 
         // Persist to DB if configured
@@ -231,6 +233,28 @@ impl ConnectionManager {
             .collect();
         tracing::debug!(count = connections.len(), "Listed connections");
         connections
+    }
+
+    /// List connections belonging to a specific organization
+    pub async fn list_by_org(&self, org_id: &Uuid) -> Vec<ConnectionInfo> {
+        self.connections
+            .read()
+            .await
+            .values()
+            .filter(|e| e.info.organization_id.as_ref() == Some(org_id))
+            .map(|e| e.info.clone())
+            .collect()
+    }
+
+    /// List personal connections owned by a specific user
+    pub async fn list_personal(&self, user_id: &Uuid) -> Vec<ConnectionInfo> {
+        self.connections
+            .read()
+            .await
+            .values()
+            .filter(|e| e.info.owner_user_id.as_ref() == Some(user_id))
+            .map(|e| e.info.clone())
+            .collect()
     }
 
     /// Remove a connection (also deletes from DB)

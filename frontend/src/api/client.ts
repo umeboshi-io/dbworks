@@ -86,8 +86,10 @@ export const api = {
   // Connections
   createConnection: (data: ConnectionRequest): Promise<Connection> =>
     request<Connection>('/connections', { method: 'POST', body: JSON.stringify(data) }),
-  listConnections: (): Promise<Connection[]> =>
-    request<Connection[]>('/connections'),
+  listConnections: (scope?: string): Promise<Connection[]> => {
+    const qs = scope ? `?scope=${encodeURIComponent(scope)}` : '';
+    return request<Connection[]>(`/connections${qs}`);
+  },
   deleteConnection: (id: string): Promise<null> =>
     request<null>(`/connections/${id}`, { method: 'DELETE' }),
 
