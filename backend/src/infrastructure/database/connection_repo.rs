@@ -7,13 +7,14 @@ use crate::infrastructure::crypto::Encryptor;
 pub async fn save_connection(
     pool: &PgPool,
     encryptor: &Encryptor,
-    org_id: &Uuid,
+    org_id: Option<&Uuid>,
+    owner_user_id: Option<&Uuid>,
     info: &ConnectionInfo,
 ) -> anyhow::Result<SavedConnectionRow> {
     let encrypted_password = encryptor.encrypt(&info.password)?;
     let row = sqlx::query_as::<_, SavedConnectionRow>(
-        r#"INSERT INTO saved_connections (id, organization_id, name, host, port, database_name, username, encrypted_password, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        r#"INSERT INTO saved_connections (id, organization_id, name, host, port, database_name, username, encrypted_password, created_by, owner_user_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING *"#,
     )
     .bind(info.id)
@@ -24,15 +25,14 @@ pub async fn save_connection(
     .bind(&info.database)
     .bind(&info.user)
     .bind(&encrypted_password)
-    .bind::<Option<Uuid>>(None)
+    .bind::<Option<Uuid>>(None) // created_by
+    .bind(owner_user_id)
     .fetch_one(pool)
     .await?;
     Ok(row)
 }
 
-pub async fn list_saved_connections(
-    pool: &PgPool,
-) -> anyhow::Result<Vec<SavedConnectionRow>> {
+pub async fn list_saved_connections(pool: &PgPool) -> anyhow::Result<Vec<SavedConnectionRow>> {
     let rows = sqlx::query_as::<_, SavedConnectionRow>(
         "SELECT * FROM saved_connections ORDER BY created_at",
     )
@@ -41,7 +41,6 @@ pub async fn list_saved_connections(
     Ok(rows)
 }
 
-#[allow(dead_code)]
 pub async fn list_saved_connections_by_org(
     pool: &PgPool,
     org_id: &Uuid,
@@ -50,6 +49,19 @@ pub async fn list_saved_connections_by_org(
         "SELECT * FROM saved_connections WHERE organization_id = $1 ORDER BY created_at",
     )
     .bind(org_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows)
+}
+
+pub async fn list_saved_connections_by_user(
+    pool: &PgPool,
+    user_id: &Uuid,
+) -> anyhow::Result<Vec<SavedConnectionRow>> {
+    let rows = sqlx::query_as::<_, SavedConnectionRow>(
+        "SELECT * FROM saved_connections WHERE owner_user_id = $1 ORDER BY created_at",
+    )
+    .bind(user_id)
     .fetch_all(pool)
     .await?;
     Ok(rows)

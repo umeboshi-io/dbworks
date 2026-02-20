@@ -5,8 +5,8 @@ use crate::domain::user::AppUser;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: String,       // user_id
-    pub org_id: String,    // organization_id
+    pub sub: String,    // user_id
+    pub org_id: String, // organization_id
     pub role: String,
     pub email: String,
     pub exp: usize,
@@ -21,7 +21,10 @@ impl Claims {
 
         let claims = Claims {
             sub: user.id.to_string(),
-            org_id: user.organization_id.to_string(),
+            org_id: user
+                .organization_id
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
             role: user.role.clone(),
             email: user.email.clone(),
             exp: expiration,

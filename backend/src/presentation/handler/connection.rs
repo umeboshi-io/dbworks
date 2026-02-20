@@ -20,15 +20,35 @@ pub async fn create_connection(
 
     let current_user = match get_current_user(&state.pool, &state.jwt_secret, &headers).await {
         Ok(u) => u,
-        Err(status) => return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response(),
+        Err(status) => {
+            return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
+        }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
+
+    // Determine ownership: org user → org connection (requires super_admin), no org → personal connection
+    let (organization_id, owner_user_id) = if let Some(org_id) = current_user.organization_id {
+        // User belongs to an org → org-level connection, requires super_admin
+        if let Err(resp) = require_super_admin(&current_user) {
+            return resp.into_response();
+        }
+        (Some(org_id), None)
+    } else {
+        // No org → personal connection, any authenticated user can create
+        (None, Some(current_user.id))
+    };
 
     match state
         .connection_manager
-        .add_postgres(req.name, req.host, port, req.database, req.user, req.password, req.organization_id)
+        .add_postgres(
+            req.name,
+            req.host,
+            port,
+            req.database,
+            req.user,
+            req.password,
+            organization_id,
+            owner_user_id,
+        )
         .await
     {
         Ok(info) => {
@@ -37,7 +57,11 @@ pub async fn create_connection(
         }
         Err(e) => {
             tracing::error!(error = %e, "Failed to create connection");
-            (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": e.to_string() }))).into_response()
+            (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": e.to_string() })),
+            )
+                .into_response()
         }
     }
 }
@@ -57,7 +81,9 @@ pub async fn delete_connection(
 
     let current_user = match get_current_user(&state.pool, &state.jwt_secret, &headers).await {
         Ok(u) => u,
-        Err(status) => return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response(),
+        Err(status) => {
+            return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
+        }
     };
     if let Err(resp) = require_super_admin(&current_user) {
         return resp.into_response();
@@ -66,6 +92,10 @@ pub async fn delete_connection(
     if state.connection_manager.remove(&conn_id).await {
         StatusCode::NO_CONTENT.into_response()
     } else {
-        (StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Connection not found" }))).into_response()
+        (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Connection not found" })),
+        )
+            .into_response()
     }
 }

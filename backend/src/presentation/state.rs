@@ -8,9 +8,9 @@ use sqlx::PgPool;
 use crate::domain::connection::ConnectionInfo;
 use crate::infrastructure::auth::oauth::OAuthClients;
 use crate::infrastructure::crypto::Encryptor;
+use crate::infrastructure::database::connection_repo;
 use crate::infrastructure::datasource::DataSource;
 use crate::infrastructure::datasource::postgres::PostgresDataSource;
-use crate::infrastructure::database::connection_repo;
 
 pub struct AppStateInner {
     pub connection_manager: ConnectionManager,
@@ -94,7 +94,7 @@ impl ConnectionManager {
                         database: row.database_name.clone(),
                         user: row.username.clone(),
                         password,
-                        organization_id: Some(row.organization_id),
+                        organization_id: row.organization_id,
                     };
                     let entry = ConnectionEntry {
                         info,
@@ -131,6 +131,7 @@ impl ConnectionManager {
         user: String,
         password: String,
         organization_id: Option<Uuid>,
+        owner_user_id: Option<Uuid>,
     ) -> anyhow::Result<ConnectionInfo> {
         let conn_string = format!(
             "postgres://{}:{}@{}:{}/{}",
@@ -178,8 +179,15 @@ impl ConnectionManager {
 
         // Persist to DB if configured
         if let (Some(pool), Some(encryptor)) = (&self.pool, &self.encryptor) {
-            let org_id = organization_id.unwrap_or(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap());
-            if let Err(e) = connection_repo::save_connection(pool, encryptor, &org_id, &info).await {
+            if let Err(e) = connection_repo::save_connection(
+                pool,
+                encryptor,
+                organization_id.as_ref(),
+                owner_user_id.as_ref(),
+                &info,
+            )
+            .await
+            {
                 tracing::error!(error = %e, "Failed to persist connection to DB");
                 return Err(e);
             }

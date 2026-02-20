@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct SavedConnectionRow {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: Option<Uuid>,
     pub name: String,
     pub host: String,
     pub port: i32,
@@ -15,6 +15,7 @@ pub struct SavedConnectionRow {
     pub username: String,
     pub encrypted_password: String,
     pub created_by: Option<Uuid>,
+    pub owner_user_id: Option<Uuid>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -23,13 +24,14 @@ pub struct SavedConnectionRow {
 #[derive(Debug, Clone, Serialize)]
 pub struct SavedConnectionResponse {
     pub id: Uuid,
-    pub organization_id: Uuid,
+    pub organization_id: Option<Uuid>,
     pub name: String,
     pub host: String,
     pub port: i32,
     pub database_name: String,
     pub username: String,
     pub created_by: Option<Uuid>,
+    pub owner_user_id: Option<Uuid>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -44,6 +46,7 @@ impl From<&SavedConnectionRow> for SavedConnectionResponse {
             database_name: row.database_name.clone(),
             username: row.username.clone(),
             created_by: row.created_by,
+            owner_user_id: row.owner_user_id,
             created_at: row.created_at,
         }
     }
