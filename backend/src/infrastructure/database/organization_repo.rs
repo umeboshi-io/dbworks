@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domain::organization::Organization;
-use crate::dto::CreateOrganizationRequest;
+use crate::presentation::request::CreateOrganizationRequest;
 
 pub async fn create_organization(
     pool: &PgPool,

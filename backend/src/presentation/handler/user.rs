@@ -6,7 +6,7 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::dto::CreateUserRequest;
+use crate::presentation::request::CreateUserRequest;
 use crate::infrastructure::database::user_repo;
 use crate::presentation::middleware::{get_current_user, require_super_admin};
 use crate::presentation::state::AppState;

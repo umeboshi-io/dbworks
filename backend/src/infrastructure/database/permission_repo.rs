@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::domain::permission::*;
 use crate::domain::user::AppUser;
-use crate::dto::*;
+use crate::presentation::request::*;
 
 // ============================================================
 // User Connection Permissions

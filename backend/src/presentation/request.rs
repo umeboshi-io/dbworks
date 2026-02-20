@@ -54,7 +54,6 @@ pub struct ConnectionRequest {
     pub database: String,
     pub user: String,
     pub password: String,
-    pub organization_id: Option<Uuid>,
 }
 
 // ============================================================

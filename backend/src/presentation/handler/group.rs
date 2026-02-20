@@ -6,7 +6,7 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::dto::{AddGroupMemberRequest, CreateGroupRequest};
+use crate::presentation::request::{AddGroupMemberRequest, CreateGroupRequest};
 use crate::infrastructure::database::group_repo;
 use crate::presentation::middleware::{get_current_user, require_super_admin};
 use crate::presentation::state::AppState;

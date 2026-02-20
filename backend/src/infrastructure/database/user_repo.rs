@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domain::user::AppUser;
-use crate::dto::CreateUserRequest;
+use crate::presentation::request::CreateUserRequest;
 
 pub async fn create_user(
     pool: &PgPool,

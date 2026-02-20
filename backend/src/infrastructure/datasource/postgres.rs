@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::infrastructure::datasource::DataSource;
 use crate::domain::data::{ColumnInfo, RowsResponse, TableInfo, TableSchema};
-use crate::dto::RowsQuery;
+use crate::presentation::request::RowsQuery;
 
 pub struct PostgresDataSource {
     pool: PgPool,

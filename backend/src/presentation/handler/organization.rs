@@ -5,7 +5,7 @@ use axum::{
     response::IntoResponse,
 };
 
-use crate::dto::CreateOrganizationRequest;
+use crate::presentation::request::CreateOrganizationRequest;
 use crate::infrastructure::database::organization_repo;
 use crate::presentation::state::AppState;
 

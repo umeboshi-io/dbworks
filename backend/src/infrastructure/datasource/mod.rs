@@ -3,7 +3,7 @@ pub mod postgres;
 use async_trait::async_trait;
 
 use crate::domain::data::{RowsResponse, TableInfo, TableSchema};
-use crate::dto::RowsQuery;
+use crate::presentation::request::RowsQuery;
 
 /// Trait abstracting database operations.
 /// Implement this for each data source (PostgreSQL, MySQL, NoSQL, etc.)

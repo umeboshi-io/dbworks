@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::domain::group::Group;
 use crate::domain::user::AppUser;
-use crate::dto::CreateGroupRequest;
+use crate::presentation::request::CreateGroupRequest;
 
 pub async fn create_group(
     pool: &PgPool,

@@ -6,7 +6,7 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::dto::RowsQuery;
+use crate::presentation::request::RowsQuery;
 use crate::infrastructure::database::permission_repo;
 use crate::presentation::middleware::get_current_user;
 use crate::presentation::state::AppState;
