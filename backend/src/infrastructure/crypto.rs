@@ -1,7 +1,4 @@
-use aes_gcm::{
-    Aes256Gcm, KeyInit, Nonce,
-    aead::Aead,
-};
+use aes_gcm::{Aes256Gcm, KeyInit, Nonce, aead::Aead};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use rand::RngCore;
 
@@ -71,5 +68,79 @@ impl Encryptor {
 
         String::from_utf8(plaintext)
             .map_err(|e| anyhow::anyhow!("Decrypted text is not valid UTF-8: {}", e))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_encryptor() -> Encryptor {
+        let key = [42u8; 32]; // fixed key for testing
+        Encryptor { key }
+    }
+
+    fn other_encryptor() -> Encryptor {
+        let key = [99u8; 32]; // different key
+        Encryptor { key }
+    }
+
+    #[test]
+    fn encrypt_decrypt_roundtrip() {
+        let enc = test_encryptor();
+        let plaintext = "my_secret_password";
+        let encrypted = enc.encrypt(plaintext).unwrap();
+        let decrypted = enc.decrypt(&encrypted).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn encrypt_produces_different_ciphertext_each_time() {
+        let enc = test_encryptor();
+        let a = enc.encrypt("password").unwrap();
+        let b = enc.encrypt("password").unwrap();
+        assert_ne!(
+            a, b,
+            "nonce randomization should produce different ciphertexts"
+        );
+    }
+
+    #[test]
+    fn decrypt_with_wrong_key_fails() {
+        let enc = test_encryptor();
+        let other = other_encryptor();
+        let encrypted = enc.encrypt("secret").unwrap();
+        assert!(other.decrypt(&encrypted).is_err());
+    }
+
+    #[test]
+    fn encrypt_decrypt_empty_string() {
+        let enc = test_encryptor();
+        let encrypted = enc.encrypt("").unwrap();
+        let decrypted = enc.decrypt(&encrypted).unwrap();
+        assert_eq!(decrypted, "");
+    }
+
+    #[test]
+    fn encrypt_decrypt_unicode() {
+        let enc = test_encryptor();
+        let plaintext = "日本語パスワード🔑";
+        let encrypted = enc.encrypt(plaintext).unwrap();
+        let decrypted = enc.decrypt(&encrypted).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn decrypt_invalid_base64_fails() {
+        let enc = test_encryptor();
+        assert!(enc.decrypt("not-valid-base64!!!").is_err());
+    }
+
+    #[test]
+    fn decrypt_too_short_ciphertext_fails() {
+        let enc = test_encryptor();
+        // base64 of less than 12 bytes
+        let short = BASE64.encode(&[1u8; 5]);
+        assert!(enc.decrypt(&short).is_err());
     }
 }

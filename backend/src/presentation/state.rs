@@ -274,3 +274,138 @@ impl ConnectionManager {
         removed
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    use crate::domain::data::{RowsResponse, TableInfo, TableSchema};
+    use crate::presentation::request::RowsQuery;
+    use async_trait::async_trait;
+
+    /// Minimal mock DataSource for testing (no real DB)
+    struct MockDataSource;
+
+    #[async_trait]
+    impl DataSource for MockDataSource {
+        async fn list_tables(&self) -> anyhow::Result<Vec<TableInfo>> {
+            Ok(vec![])
+        }
+        async fn get_table_schema(&self, _: &str) -> anyhow::Result<TableSchema> {
+            anyhow::bail!("mock")
+        }
+        async fn list_rows(&self, _: &str, _: &RowsQuery) -> anyhow::Result<RowsResponse> {
+            anyhow::bail!("mock")
+        }
+        async fn get_row(&self, _: &str, _: &str) -> anyhow::Result<serde_json::Value> {
+            anyhow::bail!("mock")
+        }
+        async fn insert_row(
+            &self,
+            _: &str,
+            _: &serde_json::Value,
+        ) -> anyhow::Result<serde_json::Value> {
+            anyhow::bail!("mock")
+        }
+        async fn update_row(
+            &self,
+            _: &str,
+            _: &str,
+            _: &serde_json::Value,
+        ) -> anyhow::Result<serde_json::Value> {
+            anyhow::bail!("mock")
+        }
+        async fn delete_row(&self, _: &str, _: &str) -> anyhow::Result<()> {
+            anyhow::bail!("mock")
+        }
+    }
+
+    fn make_entry(org_id: Option<Uuid>, owner_id: Option<Uuid>) -> (Uuid, ConnectionEntry) {
+        let id = Uuid::new_v4();
+        let info = ConnectionInfo {
+            id,
+            name: "test".to_string(),
+            host: "localhost".to_string(),
+            port: 5432,
+            database: "db".to_string(),
+            user: "user".to_string(),
+            password: "pass".to_string(),
+            organization_id: org_id,
+            owner_user_id: owner_id,
+        };
+        let entry = ConnectionEntry {
+            info,
+            datasource: Arc::new(MockDataSource),
+        };
+        (id, entry)
+    }
+
+    #[tokio::test]
+    async fn list_empty() {
+        let cm = ConnectionManager::new(None, None);
+        assert!(cm.list().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_by_org_filters_correctly() {
+        let cm = ConnectionManager::new(None, None);
+        let org_a = Uuid::new_v4();
+        let org_b = Uuid::new_v4();
+
+        let (id1, entry1) = make_entry(Some(org_a), None);
+        let (id2, entry2) = make_entry(Some(org_b), None);
+        let (id3, entry3) = make_entry(Some(org_a), None);
+
+        {
+            let mut map = cm.connections.write().await;
+            map.insert(id1, entry1);
+            map.insert(id2, entry2);
+            map.insert(id3, entry3);
+        }
+
+        let org_a_conns = cm.list_by_org(&org_a).await;
+        assert_eq!(org_a_conns.len(), 2);
+        assert!(org_a_conns.iter().all(|c| c.organization_id == Some(org_a)));
+
+        let org_b_conns = cm.list_by_org(&org_b).await;
+        assert_eq!(org_b_conns.len(), 1);
+
+        let org_c_conns = cm.list_by_org(&Uuid::new_v4()).await;
+        assert!(org_c_conns.is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_personal_filters_correctly() {
+        let cm = ConnectionManager::new(None, None);
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+
+        let (id1, entry1) = make_entry(None, Some(user_a));
+        let (id2, entry2) = make_entry(None, Some(user_b));
+
+        {
+            let mut map = cm.connections.write().await;
+            map.insert(id1, entry1);
+            map.insert(id2, entry2);
+        }
+
+        let personal = cm.list_personal(&user_a).await;
+        assert_eq!(personal.len(), 1);
+        assert_eq!(personal[0].owner_user_id, Some(user_a));
+    }
+
+    #[tokio::test]
+    async fn get_datasource_unknown_id_returns_none() {
+        let cm = ConnectionManager::new(None, None);
+        assert!(cm.get_datasource(&Uuid::new_v4()).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_datasource_existing_id_returns_some() {
+        let cm = ConnectionManager::new(None, None);
+        let (id, entry) = make_entry(None, None);
+        cm.connections.write().await.insert(id, entry);
+        assert!(cm.get_datasource(&id).await.is_some());
+    }
+}
