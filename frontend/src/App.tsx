@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import ConnectionPage from './pages/ConnectionPage';
+import OrganizationPage from './pages/OrganizationPage';
 import TablePage from './pages/TablePage';
 import LoginPage from './pages/LoginPage';
 import { useAuth } from './AuthContext';
 import { api } from './api/client';
-import type { Connection, TableInfo } from './types';
+import type { Connection, TableInfo, Organization } from './types';
 import './App.css';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(null);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
+  const [showOrgPage, setShowOrgPage] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [connectionsOpen, setConnectionsOpen] = useState(true);
   const [tablesOpen, setTablesOpen] = useState(true);
@@ -53,6 +55,10 @@ function App() {
     setConnections((prev) => [...prev, conn]);
     setActiveConnection(conn);
     setShowConnectionForm(false);
+  };
+
+  const handleOrgJoined = (_org: Organization) => {
+    setShowOrgPage(false);
   };
 
   const handleDeleteConnection = async (connId: string) => {
@@ -117,6 +123,17 @@ function App() {
                 <span className="user-name">{user.name}</span>
                 <span className="user-email">{user.email}</span>
               </div>
+              <button
+                className="btn-icon"
+                onClick={() => { setShowOrgPage(true); setShowConnectionForm(false); }}
+                title="Organizations"
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                  <rect x="2" y="4" width="16" height="14" rx="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                  <path d="M7 4V2.5A1.5 1.5 0 0 1 8.5 1h3A1.5 1.5 0 0 1 13 2.5V4" stroke="currentColor" strokeWidth="1.5" />
+                  <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              </button>
               <button className="btn-icon" onClick={logout} title="ログアウト">
                 ⏻
               </button>
@@ -221,13 +238,19 @@ function App() {
 
       {/* Main Content */}
       <main className="main-content">
-        {showConnectionForm && (
+        {showOrgPage && (
+          <OrganizationPage
+            onClose={() => setShowOrgPage(false)}
+            onJoined={handleOrgJoined}
+          />
+        )}
+        {!showOrgPage && showConnectionForm && (
           <ConnectionPage
             onCreated={handleConnectionCreated}
             onCancel={() => setShowConnectionForm(false)}
           />
         )}
-        {!showConnectionForm && activeConnection && activeTable && (
+        {!showOrgPage && !showConnectionForm && activeConnection && activeTable && (
           <TablePage
             connectionId={activeConnection.id}
             connectionName={activeConnection.name}
@@ -235,7 +258,7 @@ function App() {
             tableName={activeTable}
           />
         )}
-        {!showConnectionForm && !activeTable && (
+        {!showOrgPage && !showConnectionForm && !activeTable && (
           <div className="welcome">
             <div className="welcome-content">
               <div className="welcome-icon">
