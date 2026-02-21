@@ -6,9 +6,12 @@ use axum::{
 };
 use uuid::Uuid;
 
-use crate::presentation::middleware::{get_current_user, require_super_admin};
+use crate::presentation::middleware::get_current_user;
 use crate::presentation::request::*;
 use crate::presentation::state::AppState;
+use crate::usecase;
+
+use super::into_response;
 
 // ============================================================
 // User Connection Permissions
@@ -20,27 +23,24 @@ pub async fn grant_user_conn_permission(
     Path(conn_id): Path<Uuid>,
     Json(req): Json<GrantUserConnectionPermissionRequest>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .grant_user_connection_permission(&conn_id, &req.user_id, &req.permission, req.all_tables)
-        .await
+    match usecase::permission::grant_user_connection_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &req.user_id,
+        &req.permission,
+        req.all_tables,
+    )
+    .await
     {
         Ok(p) => (StatusCode::CREATED, Json(serde_json::json!(p))).into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -49,32 +49,22 @@ pub async fn revoke_user_conn_permission(
     headers: HeaderMap,
     Path((conn_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .revoke_user_connection_permission(&conn_id, &user_id)
-        .await
+    match usecase::permission::revoke_user_connection_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &user_id,
+    )
+    .await
     {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": "Permission not found" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -82,17 +72,11 @@ pub async fn list_user_conn_permissions(
     State(state): State<AppState>,
     Path(conn_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match state
-        .permission_repo
-        .list_user_connection_permissions(&conn_id)
+    match usecase::permission::list_user_connection_permissions(&*state.permission_repo, &conn_id)
         .await
     {
         Ok(perms) => Json(serde_json::json!(perms)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -106,27 +90,24 @@ pub async fn grant_user_table_permission(
     Path((conn_id, user_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<GrantUserTablePermissionRequest>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .grant_user_table_permission(&conn_id, &user_id, &req.table_name, &req.permission)
-        .await
+    match usecase::permission::grant_user_table_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &user_id,
+        &req.table_name,
+        &req.permission,
+    )
+    .await
     {
         Ok(p) => (StatusCode::CREATED, Json(serde_json::json!(p))).into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -135,32 +116,23 @@ pub async fn revoke_user_table_permission(
     headers: HeaderMap,
     Path((conn_id, user_id, table)): Path<(Uuid, Uuid, String)>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .revoke_user_table_permission(&conn_id, &user_id, &table)
-        .await
+    match usecase::permission::revoke_user_table_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &user_id,
+        &table,
+    )
+    .await
     {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": "Permission not found" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -168,17 +140,15 @@ pub async fn list_user_table_permissions(
     State(state): State<AppState>,
     Path((conn_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> impl IntoResponse {
-    match state
-        .permission_repo
-        .list_user_table_permissions(&conn_id, &user_id)
-        .await
+    match usecase::permission::list_user_table_permissions(
+        &*state.permission_repo,
+        &conn_id,
+        &user_id,
+    )
+    .await
     {
         Ok(perms) => Json(serde_json::json!(perms)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -192,27 +162,24 @@ pub async fn grant_group_conn_permission(
     Path(conn_id): Path<Uuid>,
     Json(req): Json<GrantGroupConnectionPermissionRequest>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .grant_group_connection_permission(&conn_id, &req.group_id, &req.permission, req.all_tables)
-        .await
+    match usecase::permission::grant_group_connection_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &req.group_id,
+        &req.permission,
+        req.all_tables,
+    )
+    .await
     {
         Ok(p) => (StatusCode::CREATED, Json(serde_json::json!(p))).into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -221,32 +188,22 @@ pub async fn revoke_group_conn_permission(
     headers: HeaderMap,
     Path((conn_id, group_id)): Path<(Uuid, Uuid)>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .revoke_group_connection_permission(&conn_id, &group_id)
-        .await
+    match usecase::permission::revoke_group_connection_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &group_id,
+    )
+    .await
     {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": "Permission not found" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -254,17 +211,11 @@ pub async fn list_group_conn_permissions(
     State(state): State<AppState>,
     Path(conn_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    match state
-        .permission_repo
-        .list_group_connection_permissions(&conn_id)
+    match usecase::permission::list_group_connection_permissions(&*state.permission_repo, &conn_id)
         .await
     {
         Ok(perms) => Json(serde_json::json!(perms)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -278,27 +229,24 @@ pub async fn grant_group_table_permission(
     Path((conn_id, group_id)): Path<(Uuid, Uuid)>,
     Json(req): Json<GrantGroupTablePermissionRequest>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .grant_group_table_permission(&conn_id, &group_id, &req.table_name, &req.permission)
-        .await
+    match usecase::permission::grant_group_table_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &group_id,
+        &req.table_name,
+        &req.permission,
+    )
+    .await
     {
         Ok(p) => (StatusCode::CREATED, Json(serde_json::json!(p))).into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -307,32 +255,23 @@ pub async fn revoke_group_table_permission(
     headers: HeaderMap,
     Path((conn_id, group_id, table)): Path<(Uuid, Uuid, String)>,
 ) -> impl IntoResponse {
-    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
-    {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
         }
     };
-    if let Err(resp) = require_super_admin(&current_user) {
-        return resp.into_response();
-    }
-    match state
-        .permission_repo
-        .revoke_group_table_permission(&conn_id, &group_id, &table)
-        .await
+    match usecase::permission::revoke_group_table_permission(
+        &*state.permission_repo,
+        &caller,
+        &conn_id,
+        &group_id,
+        &table,
+    )
+    .await
     {
-        Ok(true) => StatusCode::NO_CONTENT.into_response(),
-        Ok(false) => (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({ "error": "Permission not found" })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => into_response(e),
     }
 }
 
@@ -340,16 +279,14 @@ pub async fn list_group_table_permissions(
     State(state): State<AppState>,
     Path((conn_id, group_id)): Path<(Uuid, Uuid)>,
 ) -> impl IntoResponse {
-    match state
-        .permission_repo
-        .list_group_table_permissions(&conn_id, &group_id)
-        .await
+    match usecase::permission::list_group_table_permissions(
+        &*state.permission_repo,
+        &conn_id,
+        &group_id,
+    )
+    .await
     {
         Ok(perms) => Json(serde_json::json!(perms)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => into_response(e),
     }
 }
