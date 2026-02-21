@@ -17,12 +17,35 @@ dbworks/
 ├── docker-compose.yml    # PostgreSQL for dev
 ├── db/init.sql           # Schema + seed data
 ├── backend/              # Rust / Axum API server (port 3001)
+│   ├── migrations/       # sqlx migrations
 │   └── src/
-│       ├── main.rs           # Entrypoint, router setup
-│       ├── domain/           # Domain entities
-│       ├── dto.rs            # Request/response DTOs
-│       ├── infrastructure/   # Auth, crypto, database repos, datasource
-│       └── presentation/     # Handlers, middleware, routes, state
+│       ├── main.rs
+│       ├── domain/           # Entities + repository traits
+│       │   ├── organization.rs, user.rs, group.rs, connection.rs, permission.rs
+│       │   └── repository/   # Trait definitions (1 trait per file)
+│       ├── usecase/          # Business logic (1 function per file)
+│       │   ├── mod.rs, error.rs
+│       │   ├── organization/ # create_organization.rs, list_organizations.rs
+│       │   ├── user/         # create_user.rs, list_users.rs
+│       │   ├── group/        # create_group.rs, list_groups.rs, add_group_member.rs, ...
+│       │   ├── connection/   # create_connection.rs, list_connections.rs, delete_connection.rs
+│       │   ├── permission/   # grant_*/revoke_*/list_* (12 files)
+│       │   └── data/         # list_tables.rs, get_table_schema.rs, list_rows.rs, ... (7 files + helpers)
+│       ├── infrastructure/   # Auth (OAuth, JWT), crypto, database repos, datasource
+│       │   ├── auth/         # oauth.rs, jwt.rs
+│       │   ├── crypto.rs     # AES-256-GCM encryption
+│       │   ├── database/     # Pg*Repository implementations
+│       │   └── datasource/   # DataSource trait + PostgresDataSource
+│       └── presentation/     # HTTP layer
+│           ├── handler/      # 1 file per domain (organization, user, group, connection, permission, data)
+│           ├── middleware.rs  # Auth middleware (JWT + X-User-Id fallback)
+│           ├── request.rs    # Request DTOs
+│           ├── routes.rs     # Route registration
+│           └── state.rs      # AppState + ConnectionManager
+├── backend/tests/            # Integration tests
+│   ├── common/mod.rs         # Test DB setup (setup_test_db)
+│   ├── usecase/              # Usecase integration tests (39 tests)
+│   └── presentation/         # Handler integration tests (25 tests, axum oneshot)
 └── frontend/             # React + Vite + TypeScript (port 5173)
     └── src/
         ├── App.tsx            # Main app with sidebar nav
@@ -65,6 +88,14 @@ make lint      # Lint both
 make clean     # Clean build artifacts
 ```
 
+### Testing
+
+```bash
+cargo test                          # All tests (unit + integration)
+cargo test --test usecase_tests     # Usecase integration tests only
+cargo test --test presentation_tests # Handler integration tests only
+```
+
 ### Environment Variables (Backend)
 
 | Variable         | Description                    | Required                          |
@@ -74,8 +105,10 @@ make clean     # Clean build artifacts
 
 ## Key Design Decisions
 
-1. **DDD Architecture** — Domain, Infrastructure, Presentation layers for maintainability
-2. **DataSource trait** (`infrastructure/datasource/mod.rs`) — Abstracts DB operations for future multi-DB support (MySQL, etc.)
-3. **ConnectionManager** — Manages live connection pools; backed by DB persistence
-4. **AES-GCM encryption** — Passwords encrypted at rest, key from environment variable
-5. **Dual permission model** — Both user-level and group-level permissions supported; user permissions take priority over group permissions
+1. **DDD Architecture** — Domain, Usecase, Infrastructure, Presentation layers
+2. **1-Function-1-File usecase** — Each public function in its own file, re-exported via `mod.rs`
+3. **DataSource trait** (`infrastructure/datasource/mod.rs`) — Abstracts DB operations for future multi-DB support
+4. **ConnectionManager** — Manages live connection pools; backed by DB persistence
+5. **AES-GCM encryption** — Passwords encrypted at rest, key from environment variable
+6. **Dual permission model** — Both user-level and group-level permissions; user permissions take priority
+7. **Handler integration tests** — Use `axum::Router::oneshot()` with real test DB, `X-User-Id` header for auth
