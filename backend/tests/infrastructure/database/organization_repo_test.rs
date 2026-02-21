@@ -1,19 +1,15 @@
 use crate::common;
-use dbworks_backend::infrastructure::database::organization_repo;
-use dbworks_backend::presentation::request::CreateOrganizationRequest;
+use dbworks_backend::domain::repository::OrganizationRepository;
+use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
 use serial_test::serial;
 
 #[tokio::test]
 #[serial]
 async fn create_organization() {
     let pool = common::setup_test_db().await;
+    let repo = PgOrganizationRepository::new(pool);
 
-    let req = CreateOrganizationRequest {
-        name: "Test Org".to_string(),
-    };
-    let org = organization_repo::create_organization(&pool, &req)
-        .await
-        .unwrap();
+    let org = repo.create("Test Org").await.unwrap();
 
     assert_eq!(org.name, "Test Org");
     assert!(org.created_at.is_some());
@@ -23,17 +19,13 @@ async fn create_organization() {
 #[serial]
 async fn list_organizations_returns_all() {
     let pool = common::setup_test_db().await;
+    let repo = PgOrganizationRepository::new(pool);
 
     for name in ["Alpha", "Beta", "Gamma"] {
-        let req = CreateOrganizationRequest {
-            name: name.to_string(),
-        };
-        organization_repo::create_organization(&pool, &req)
-            .await
-            .unwrap();
+        repo.create(name).await.unwrap();
     }
 
-    let orgs = organization_repo::list_organizations(&pool).await.unwrap();
+    let orgs = repo.list().await.unwrap();
     assert_eq!(orgs.len(), 3);
 }
 
@@ -41,17 +33,11 @@ async fn list_organizations_returns_all() {
 #[serial]
 async fn get_organization_found() {
     let pool = common::setup_test_db().await;
+    let repo = PgOrganizationRepository::new(pool);
 
-    let req = CreateOrganizationRequest {
-        name: "FindMe".to_string(),
-    };
-    let created = organization_repo::create_organization(&pool, &req)
-        .await
-        .unwrap();
+    let created = repo.create("FindMe").await.unwrap();
 
-    let found = organization_repo::get_organization(&pool, &created.id)
-        .await
-        .unwrap();
+    let found = repo.get(&created.id).await.unwrap();
     assert!(found.is_some());
     assert_eq!(found.unwrap().name, "FindMe");
 }
@@ -60,9 +46,8 @@ async fn get_organization_found() {
 #[serial]
 async fn get_organization_not_found() {
     let pool = common::setup_test_db().await;
+    let repo = PgOrganizationRepository::new(pool);
 
-    let found = organization_repo::get_organization(&pool, &uuid::Uuid::new_v4())
-        .await
-        .unwrap();
+    let found = repo.get(&uuid::Uuid::new_v4()).await.unwrap();
     assert!(found.is_none());
 }

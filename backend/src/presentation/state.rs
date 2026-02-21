@@ -6,9 +6,12 @@ use uuid::Uuid;
 use sqlx::PgPool;
 
 use crate::domain::connection::ConnectionInfo;
+use crate::domain::repository::{
+    ConnectionRepository, GroupRepository, OrganizationRepository, PermissionRepository,
+    UserRepository,
+};
 use crate::infrastructure::auth::oauth::OAuthClients;
 use crate::infrastructure::crypto::Encryptor;
-use crate::infrastructure::database::connection_repo;
 use crate::infrastructure::datasource::DataSource;
 use crate::infrastructure::datasource::postgres::PostgresDataSource;
 
@@ -17,6 +20,10 @@ pub struct AppStateInner {
     pub pool: PgPool,
     pub oauth_clients: OAuthClients,
     pub jwt_secret: String,
+    pub organization_repo: Arc<dyn OrganizationRepository>,
+    pub user_repo: Arc<dyn UserRepository>,
+    pub group_repo: Arc<dyn GroupRepository>,
+    pub permission_repo: Arc<dyn PermissionRepository>,
 }
 
 pub type AppState = Arc<AppStateInner>;
@@ -27,7 +34,7 @@ pub type AppState = Arc<AppStateInner>;
 
 pub struct ConnectionManager {
     connections: RwLock<HashMap<Uuid, ConnectionEntry>>,
-    pool: Option<PgPool>,
+    connection_repo: Option<Arc<dyn ConnectionRepository>>,
     encryptor: Option<Encryptor>,
 }
 
@@ -37,20 +44,23 @@ struct ConnectionEntry {
 }
 
 impl ConnectionManager {
-    pub fn new(pool: Option<PgPool>, encryptor: Option<Encryptor>) -> Self {
+    pub fn new(
+        connection_repo: Option<Arc<dyn ConnectionRepository>>,
+        encryptor: Option<Encryptor>,
+    ) -> Self {
         Self {
             connections: RwLock::new(HashMap::new()),
-            pool,
+            connection_repo,
             encryptor,
         }
     }
 
     /// Load all saved connections from the database and establish live connections.
     pub async fn load_saved_connections(&self) -> anyhow::Result<()> {
-        let pool = match &self.pool {
-            Some(p) => p,
+        let repo = match &self.connection_repo {
+            Some(r) => r,
             None => {
-                tracing::warn!("No app DB pool configured, skipping connection loading");
+                tracing::warn!("No connection repository configured, skipping connection loading");
                 return Ok(());
             }
         };
@@ -62,7 +72,7 @@ impl ConnectionManager {
             }
         };
 
-        let saved = connection_repo::list_saved_connections(pool).await?;
+        let saved = repo.list().await?;
         tracing::info!(count = saved.len(), "Loading saved connections from DB");
 
         for row in &saved {
@@ -180,15 +190,10 @@ impl ConnectionManager {
         };
 
         // Persist to DB if configured
-        if let (Some(pool), Some(encryptor)) = (&self.pool, &self.encryptor) {
-            if let Err(e) = connection_repo::save_connection(
-                pool,
-                encryptor,
-                organization_id.as_ref(),
-                owner_user_id.as_ref(),
-                &info,
-            )
-            .await
+        if let Some(repo) = &self.connection_repo {
+            if let Err(e) = repo
+                .save(organization_id.as_ref(), owner_user_id.as_ref(), &info)
+                .await
             {
                 tracing::error!(error = %e, "Failed to persist connection to DB");
                 return Err(e);
@@ -262,8 +267,8 @@ impl ConnectionManager {
         let removed = self.connections.write().await.remove(id).is_some();
         if removed {
             // Delete from DB
-            if let Some(pool) = &self.pool {
-                if let Err(e) = connection_repo::delete_saved_connection(pool, id).await {
+            if let Some(repo) = &self.connection_repo {
+                if let Err(e) = repo.delete(id).await {
                     tracing::error!(connection_id = %id, error = %e, "Failed to delete connection from DB");
                 }
             }
