@@ -19,11 +19,7 @@ pub trait DataSource: Send + Sync {
     async fn list_rows(&self, table_name: &str, query: &RowsQuery) -> anyhow::Result<RowsResponse>;
 
     /// Get a single row by its primary key value
-    async fn get_row(
-        &self,
-        table_name: &str,
-        pk_value: &str,
-    ) -> anyhow::Result<serde_json::Value>;
+    async fn get_row(&self, table_name: &str, pk_value: &str) -> anyhow::Result<serde_json::Value>;
 
     /// Insert a new row
     async fn insert_row(
