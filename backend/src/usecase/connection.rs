@@ -70,3 +70,99 @@ pub async fn delete_connection(
         Err(UsecaseError::NotFound("Connection not found".to_string()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_user(role: &str, org_id: Option<Uuid>) -> AppUser {
+        AppUser {
+            id: Uuid::new_v4(),
+            organization_id: org_id,
+            name: "Caller".to_string(),
+            email: "caller@test.com".to_string(),
+            role: role.to_string(),
+            auth_provider: None,
+            provider_id: None,
+            avatar_url: None,
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn list_connections_all() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("member", None);
+
+        let result = list_connections(&cm, &caller, None).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn list_connections_personal() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("member", None);
+
+        let result = list_connections(&cm, &caller, Some("personal")).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn list_connections_by_org() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("member", None);
+        let org_id = Uuid::new_v4();
+
+        let result = list_connections(&cm, &caller, Some(&format!("org:{}", org_id))).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn list_connections_invalid_org_scope() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("member", None);
+
+        let result = list_connections(&cm, &caller, Some("org:invalid-uuid")).await;
+        assert!(matches!(result.unwrap_err(), UsecaseError::BadRequest(_)));
+    }
+
+    #[tokio::test]
+    async fn delete_connection_as_member_forbidden() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("member", None);
+
+        let result = delete_connection(&cm, &caller, &Uuid::new_v4()).await;
+        assert!(matches!(result.unwrap_err(), UsecaseError::Forbidden(_)));
+    }
+
+    #[tokio::test]
+    async fn delete_connection_not_found() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("super_admin", None);
+
+        let result = delete_connection(&cm, &caller, &Uuid::new_v4()).await;
+        assert!(matches!(result.unwrap_err(), UsecaseError::NotFound(_)));
+    }
+
+    #[tokio::test]
+    async fn create_connection_org_user_as_member_forbidden() {
+        let cm = ConnectionManager::new(None, None);
+        let caller = make_user("member", Some(Uuid::new_v4()));
+
+        let result = create_connection(
+            &cm,
+            &caller,
+            "test".into(),
+            "localhost".into(),
+            5432,
+            "db".into(),
+            "user".into(),
+            "pass".into(),
+        )
+        .await;
+        // Org user + member role → Forbidden
+        assert!(matches!(result.unwrap_err(), UsecaseError::Forbidden(_)));
+    }
+}
