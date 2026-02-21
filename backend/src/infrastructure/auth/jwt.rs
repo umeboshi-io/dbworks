@@ -13,7 +13,10 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub fn new(user: &AppUser, jwt_secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn generate_token(
+        user: &AppUser,
+        jwt_secret: &str,
+    ) -> Result<String, jsonwebtoken::errors::Error> {
         let expiration = chrono::Utc::now()
             .checked_add_signed(chrono::Duration::days(7))
             .expect("valid timestamp")

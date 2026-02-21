@@ -3,8 +3,8 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Row};
 use std::time::Duration;
 
-use crate::infrastructure::datasource::DataSource;
 use crate::domain::data::{ColumnInfo, RowsResponse, TableInfo, TableSchema};
+use crate::infrastructure::datasource::DataSource;
 use crate::presentation::request::RowsQuery;
 
 pub struct PostgresDataSource {
@@ -14,10 +14,7 @@ pub struct PostgresDataSource {
 impl PostgresDataSource {
     pub async fn new(connection_string: &str) -> anyhow::Result<Self> {
         // Mask password in logs
-        let safe_conn = connection_string
-            .split('@')
-            .last()
-            .unwrap_or("***");
+        let safe_conn = connection_string.split('@').next_back().unwrap_or("***");
         tracing::info!(target = %safe_conn, "Creating PostgreSQL connection pool...");
 
         let pool = PgPoolOptions::new()
@@ -171,11 +168,7 @@ impl DataSource for PostgresDataSource {
         })
     }
 
-    async fn list_rows(
-        &self,
-        table_name: &str,
-        query: &RowsQuery,
-    ) -> anyhow::Result<RowsResponse> {
+    async fn list_rows(&self, table_name: &str, query: &RowsQuery) -> anyhow::Result<RowsResponse> {
         let page = query.page.unwrap_or(1).max(1);
         let per_page = query.per_page.unwrap_or(20).min(100);
         let offset = (page - 1) * per_page;
@@ -215,7 +208,12 @@ impl DataSource for PostgresDataSource {
                     filter_values.push(parts[2].to_string());
                 }
                 where_clause = format!(" WHERE {}::text {} $1", col, op);
-                tracing::debug!(column = parts[0], operator = op, value = parts[2], "Filter applied");
+                tracing::debug!(
+                    column = parts[0],
+                    operator = op,
+                    value = parts[2],
+                    "Filter applied"
+                );
             }
         }
 
@@ -283,11 +281,7 @@ impl DataSource for PostgresDataSource {
         })
     }
 
-    async fn get_row(
-        &self,
-        table_name: &str,
-        pk_value: &str,
-    ) -> anyhow::Result<serde_json::Value> {
+    async fn get_row(&self, table_name: &str, pk_value: &str) -> anyhow::Result<serde_json::Value> {
         tracing::info!(table = %table_name, pk = %pk_value, "Getting single row");
         let pk_columns = self.get_primary_key_columns(table_name).await?;
         let pk_col = pk_columns

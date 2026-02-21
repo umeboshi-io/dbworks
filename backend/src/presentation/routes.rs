@@ -14,17 +14,14 @@ pub fn create_router() -> Router<AppState> {
         .route("/api/auth/github/callback", get(oauth::github_callback))
         .route("/api/auth/me", get(oauth::me))
         // Organization management
-        .route("/api/organizations", post(organization::create_organization))
+        .route(
+            "/api/organizations",
+            post(organization::create_organization),
+        )
         .route("/api/organizations", get(organization::list_organizations))
         // User management
-        .route(
-            "/api/organizations/{org_id}/users",
-            post(user::create_user),
-        )
-        .route(
-            "/api/organizations/{org_id}/users",
-            get(user::list_users),
-        )
+        .route("/api/organizations/{org_id}/users", post(user::create_user))
+        .route("/api/organizations/{org_id}/users", get(user::list_users))
         // Group management
         .route(
             "/api/organizations/{org_id}/groups",
@@ -106,10 +103,7 @@ pub fn create_router() -> Router<AppState> {
             delete(permission::revoke_group_table_permission),
         )
         // Table introspection
-        .route(
-            "/api/connections/{conn_id}/tables",
-            get(data::list_tables),
-        )
+        .route("/api/connections/{conn_id}/tables", get(data::list_tables))
         .route(
             "/api/connections/{conn_id}/tables/{table}/schema",
             get(data::get_table_schema),
