@@ -1,6 +1,5 @@
-mod domain;
-mod infrastructure;
-mod presentation;
+use dbworks_backend::infrastructure;
+use dbworks_backend::presentation;
 
 use std::sync::Arc;
 
