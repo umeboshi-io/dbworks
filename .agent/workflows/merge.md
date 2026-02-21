@@ -29,7 +29,11 @@ gh pr create --base main --head <branch-name> \
   --body "<detailed description of changes>"
 ```
 
-## 4. Squash merge via GitHub CLI
+## 4. **STOP — Wait for user instruction**
+
+After creating the PR, notify the user with the PR URL and **wait for explicit approval** before proceeding to squash merge. Do NOT auto-merge.
+
+## 5. Squash merge via GitHub CLI (only after user approval)
 
 ```bash
 gh pr merge <pr-number> --squash \
@@ -38,7 +42,7 @@ gh pr merge <pr-number> --squash \
 
 // turbo
 
-## 5. Pull the squashed commit into local main
+## 6. Pull the squashed commit into local main
 
 ```bash
 git checkout main
