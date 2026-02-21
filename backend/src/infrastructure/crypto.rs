@@ -1,6 +1,5 @@
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce, aead::Aead};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use rand::RngCore;
 
 /// AES-256-GCM encryptor for database connection passwords.
 #[derive(Clone)]
@@ -33,7 +32,7 @@ impl Encryptor {
             .map_err(|e| anyhow::anyhow!("Failed to create cipher: {}", e))?;
 
         let mut nonce_bytes = [0u8; 12];
-        rand::thread_rng().fill_bytes(&mut nonce_bytes);
+        rand::fill(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         let ciphertext = cipher
