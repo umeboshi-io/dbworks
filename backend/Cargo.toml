@@ -18,7 +18,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 aes-gcm = "0.10"
 base64 = "0.22"
-rand = "0.8"
+rand = "0.10"
 dotenvy = "0.15"
 oauth2 = "4"
 jsonwebtoken = "9"
