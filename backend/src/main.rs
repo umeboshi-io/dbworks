@@ -8,8 +8,13 @@ use tracing_subscriber::EnvFilter;
 
 use infrastructure::auth::oauth::OAuthClients;
 use infrastructure::crypto::Encryptor;
+use infrastructure::database::connection_repo::PgConnectionRepository;
+use infrastructure::database::group_repo::PgGroupRepository;
+use infrastructure::database::organization_repo::PgOrganizationRepository;
+use infrastructure::database::permission_repo::PgPermissionRepository;
+use infrastructure::database::user_repo::PgUserRepository;
 use presentation::routes::create_router;
-use presentation::state::{AppState, AppStateInner, ConnectionManager};
+use presentation::state::{AppStateInner, ConnectionManager};
 
 #[tokio::main]
 async fn main() {
@@ -60,8 +65,20 @@ async fn main() {
         }
     };
 
-    // Create connection manager with DB persistence
-    let connection_manager = ConnectionManager::new(Some(pool.clone()), encryptor);
+    // Build repository implementations
+    let organization_repo = Arc::new(PgOrganizationRepository::new(pool.clone()));
+    let user_repo = Arc::new(PgUserRepository::new(pool.clone()));
+    let group_repo = Arc::new(PgGroupRepository::new(pool.clone()));
+    let permission_repo = Arc::new(PgPermissionRepository::new(pool.clone()));
+    let connection_repo: Option<
+        Arc<dyn dbworks_backend::domain::repository::ConnectionRepository>,
+    > = encryptor
+        .as_ref()
+        .map(|enc| Arc::new(PgConnectionRepository::new(pool.clone(), enc.clone())) as Arc<_>);
+
+    // Create connection manager with trait-based persistence
+    // ConnectionManager still needs encryptor for decrypting passwords during load_saved_connections
+    let connection_manager = ConnectionManager::new(connection_repo, encryptor);
 
     // Load saved connections from DB
     if let Err(e) = connection_manager.load_saved_connections().await {
@@ -91,11 +108,15 @@ async fn main() {
         "dbworks-dev-secret-change-me".to_string()
     });
 
-    let state: AppState = Arc::new(AppStateInner {
+    let state = Arc::new(AppStateInner {
         connection_manager,
         pool,
         oauth_clients,
         jwt_secret,
+        organization_repo,
+        user_repo,
+        group_repo,
+        permission_repo,
     });
 
     let cors = CorsLayer::new()

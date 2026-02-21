@@ -445,7 +445,7 @@ pub async fn me(
         }
     };
 
-    match crate::infrastructure::database::user_repo::get_user(&state.pool, &user_id).await {
+    match state.user_repo.get(&user_id).await {
         Ok(Some(user)) => Json(serde_json::json!(user)).into_response(),
         Ok(None) => (
             StatusCode::UNAUTHORIZED,

@@ -1,35 +1,45 @@
+use async_trait::async_trait;
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domain::organization::Organization;
-use crate::presentation::request::CreateOrganizationRequest;
+use crate::domain::repository::OrganizationRepository;
 
-pub async fn create_organization(
-    pool: &PgPool,
-    req: &CreateOrganizationRequest,
-) -> anyhow::Result<Organization> {
-    let org = sqlx::query_as::<_, Organization>(
-        "INSERT INTO organizations (name) VALUES ($1) RETURNING *",
-    )
-    .bind(&req.name)
-    .fetch_one(pool)
-    .await?;
-    Ok(org)
+pub struct PgOrganizationRepository {
+    pool: PgPool,
 }
 
-pub async fn list_organizations(pool: &PgPool) -> anyhow::Result<Vec<Organization>> {
-    let orgs = sqlx::query_as::<_, Organization>("SELECT * FROM organizations ORDER BY created_at")
-        .fetch_all(pool)
+impl PgOrganizationRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl OrganizationRepository for PgOrganizationRepository {
+    async fn create(&self, name: &str) -> anyhow::Result<Organization> {
+        let org = sqlx::query_as::<_, Organization>(
+            "INSERT INTO organizations (name) VALUES ($1) RETURNING *",
+        )
+        .bind(name)
+        .fetch_one(&self.pool)
         .await?;
-    Ok(orgs)
-}
+        Ok(org)
+    }
 
-#[allow(dead_code)]
-pub async fn get_organization(pool: &PgPool, id: &Uuid) -> anyhow::Result<Option<Organization>> {
-    let org =
-        sqlx::query_as::<_, Organization>("SELECT * FROM organizations WHERE id = $1")
+    async fn list(&self) -> anyhow::Result<Vec<Organization>> {
+        let orgs =
+            sqlx::query_as::<_, Organization>("SELECT * FROM organizations ORDER BY created_at")
+                .fetch_all(&self.pool)
+                .await?;
+        Ok(orgs)
+    }
+
+    async fn get(&self, id: &Uuid) -> anyhow::Result<Option<Organization>> {
+        let org = sqlx::query_as::<_, Organization>("SELECT * FROM organizations WHERE id = $1")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&self.pool)
             .await?;
-    Ok(org)
+        Ok(org)
+    }
 }

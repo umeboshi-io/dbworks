@@ -2,16 +2,15 @@ use axum::{
     Json,
     http::{HeaderMap, StatusCode},
 };
-use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::domain::repository::UserRepository;
 use crate::domain::user::AppUser;
 use crate::infrastructure::auth::jwt::{Claims, extract_bearer_token};
-use crate::infrastructure::database::user_repo;
 
 /// Authenticate user from JWT, falling back to X-User-Id for backward compat.
 pub async fn authenticate_user(
-    pool: &PgPool,
+    user_repo: &dyn UserRepository,
     jwt_secret: &str,
     headers: &HeaderMap,
 ) -> Result<AppUser, StatusCode> {
@@ -19,7 +18,8 @@ pub async fn authenticate_user(
     if let Some(token) = extract_bearer_token(headers) {
         let claims = Claims::decode(&token, jwt_secret).map_err(|_| StatusCode::UNAUTHORIZED)?;
         let user_id = Uuid::parse_str(&claims.sub).map_err(|_| StatusCode::UNAUTHORIZED)?;
-        return user_repo::get_user(pool, &user_id)
+        return user_repo
+            .get(&user_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             .ok_or(StatusCode::UNAUTHORIZED);
@@ -33,18 +33,19 @@ pub async fn authenticate_user(
 
     let user_id = Uuid::parse_str(user_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    user_repo::get_user(pool, &user_id)
+    user_repo
+        .get(&user_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::UNAUTHORIZED)
 }
 
 pub async fn get_current_user(
-    pool: &PgPool,
+    user_repo: &dyn UserRepository,
     jwt_secret: &str,
     headers: &HeaderMap,
 ) -> Result<AppUser, StatusCode> {
-    authenticate_user(pool, jwt_secret, headers).await
+    authenticate_user(user_repo, jwt_secret, headers).await
 }
 
 pub fn require_super_admin(user: &AppUser) -> Result<(), (StatusCode, Json<serde_json::Value>)> {

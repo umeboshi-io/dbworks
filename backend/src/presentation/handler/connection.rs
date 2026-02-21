@@ -24,7 +24,8 @@ pub async fn create_connection(
     let port = req.port.unwrap_or(5432);
     tracing::info!(name = %req.name, host = %req.host, port = port, database = %req.database, "POST /api/connections");
 
-    let current_user = match get_current_user(&state.pool, &state.jwt_secret, &headers).await {
+    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
+    {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
@@ -79,7 +80,8 @@ pub async fn list_connections(
 ) -> impl IntoResponse {
     tracing::debug!(scope = ?params.scope, "GET /api/connections");
 
-    let current_user = match get_current_user(&state.pool, &state.jwt_secret, &headers).await {
+    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
+    {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
@@ -122,7 +124,8 @@ pub async fn delete_connection(
 ) -> impl IntoResponse {
     tracing::info!(connection_id = %conn_id, "DELETE /api/connections/:conn_id");
 
-    let current_user = match get_current_user(&state.pool, &state.jwt_secret, &headers).await {
+    let current_user = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await
+    {
         Ok(u) => u,
         Err(status) => {
             return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
