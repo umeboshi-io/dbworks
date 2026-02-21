@@ -4,6 +4,7 @@ use crate::presentation::state::ConnectionManager;
 use crate::usecase::UsecaseError;
 use crate::usecase::error::require_super_admin;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_connection(
     connection_manager: &ConnectionManager,
     caller: &AppUser,

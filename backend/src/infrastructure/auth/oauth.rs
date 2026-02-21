@@ -234,7 +234,7 @@ pub async fn google_callback(
     };
 
     // Generate JWT
-    let token = match Claims::new(&user, &state.jwt_secret) {
+    let token = match Claims::generate_token(&user, &state.jwt_secret) {
         Ok(t) => t,
         Err(e) => {
             tracing::error!(error = %e, "Failed to generate JWT");
@@ -389,7 +389,7 @@ pub async fn github_callback(
     };
 
     // Generate JWT
-    let jwt = match Claims::new(&user, &state.jwt_secret) {
+    let jwt = match Claims::generate_token(&user, &state.jwt_secret) {
         Ok(t) => t,
         Err(e) => {
             tracing::error!(error = %e, "Failed to generate JWT");

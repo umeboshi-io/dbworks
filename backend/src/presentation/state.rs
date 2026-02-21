@@ -133,6 +133,7 @@ impl ConnectionManager {
     }
 
     /// Register a new PostgreSQL connection and persist it.
+    #[allow(clippy::too_many_arguments)]
     pub async fn add_postgres(
         &self,
         name: String,
@@ -267,10 +268,10 @@ impl ConnectionManager {
         let removed = self.connections.write().await.remove(id).is_some();
         if removed {
             // Delete from DB
-            if let Some(repo) = &self.connection_repo {
-                if let Err(e) = repo.delete(id).await {
-                    tracing::error!(connection_id = %id, error = %e, "Failed to delete connection from DB");
-                }
+            if let Some(repo) = &self.connection_repo
+                && let Err(e) = repo.delete(id).await
+            {
+                tracing::error!(connection_id = %id, error = %e, "Failed to delete connection from DB");
             }
             tracing::info!(connection_id = %id, "Connection removed");
         } else {

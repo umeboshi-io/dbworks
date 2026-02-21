@@ -14,7 +14,7 @@ pub struct PostgresDataSource {
 impl PostgresDataSource {
     pub async fn new(connection_string: &str) -> anyhow::Result<Self> {
         // Mask password in logs
-        let safe_conn = connection_string.split('@').last().unwrap_or("***");
+        let safe_conn = connection_string.split('@').next_back().unwrap_or("***");
         tracing::info!(target = %safe_conn, "Creating PostgreSQL connection pool...");
 
         let pool = PgPoolOptions::new()
