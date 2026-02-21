@@ -2,9 +2,10 @@
 
 > A schema-driven database manager — connect to any PostgreSQL database, introspect its schema, and perform CRUD operations through a modern web UI.
 
+[![CI](https://github.com/umeboshi-io/dbworks/actions/workflows/ci.yml/badge.svg)](https://github.com/umeboshi-io/dbworks/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/Backend-Rust%20%2F%20Axum-orange?logo=rust)](backend/)
 [![React](https://img.shields.io/badge/Frontend-React%20%2F%20TypeScript-blue?logo=react)](frontend/)
-[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-336791?logo=postgresql)](docker-compose.yml)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2018-336791?logo=postgresql)](docker-compose.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
