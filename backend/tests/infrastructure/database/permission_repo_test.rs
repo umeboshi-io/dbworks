@@ -1,11 +1,11 @@
-mod common;
-
+use crate::common;
 use dbworks_backend::domain::connection::ConnectionInfo;
 use dbworks_backend::infrastructure::crypto::Encryptor;
 use dbworks_backend::infrastructure::database::{
     connection_repo, group_repo, organization_repo, permission_repo, user_repo,
 };
 use dbworks_backend::presentation::request::*;
+use serial_test::serial;
 use uuid::Uuid;
 
 // ============================================================
@@ -96,6 +96,7 @@ async fn setup() -> TestFixture {
 // ============================================================
 
 #[tokio::test]
+#[serial]
 async fn grant_and_list_user_connection_permission() {
     let f = setup().await;
 
@@ -120,6 +121,7 @@ async fn grant_and_list_user_connection_permission() {
 }
 
 #[tokio::test]
+#[serial]
 async fn grant_user_connection_permission_upserts() {
     let f = setup().await;
 
@@ -154,6 +156,7 @@ async fn grant_user_connection_permission_upserts() {
 }
 
 #[tokio::test]
+#[serial]
 async fn revoke_user_connection_permission() {
     let f = setup().await;
 
@@ -183,6 +186,7 @@ async fn revoke_user_connection_permission() {
 // ============================================================
 
 #[tokio::test]
+#[serial]
 async fn grant_and_list_user_table_permission() {
     let f = setup().await;
 
@@ -205,6 +209,7 @@ async fn grant_and_list_user_table_permission() {
 }
 
 #[tokio::test]
+#[serial]
 async fn revoke_user_table_permission() {
     let f = setup().await;
 
@@ -228,6 +233,7 @@ async fn revoke_user_table_permission() {
 // ============================================================
 
 #[tokio::test]
+#[serial]
 async fn grant_and_list_group_connection_permission() {
     let f = setup().await;
 
@@ -261,6 +267,7 @@ async fn grant_and_list_group_connection_permission() {
 }
 
 #[tokio::test]
+#[serial]
 async fn revoke_group_connection_permission() {
     let f = setup().await;
 
@@ -296,6 +303,7 @@ async fn revoke_group_connection_permission() {
 // ============================================================
 
 #[tokio::test]
+#[serial]
 async fn grant_and_list_group_table_permission() {
     let f = setup().await;
 
@@ -331,6 +339,7 @@ async fn grant_and_list_group_table_permission() {
 // ============================================================
 
 #[tokio::test]
+#[serial]
 async fn resolve_connection_permission_super_admin() {
     let f = setup().await;
 
@@ -347,6 +356,7 @@ async fn resolve_connection_permission_super_admin() {
 }
 
 #[tokio::test]
+#[serial]
 async fn resolve_connection_permission_owner() {
     let f = setup().await;
 
@@ -364,6 +374,7 @@ async fn resolve_connection_permission_owner() {
 }
 
 #[tokio::test]
+#[serial]
 async fn resolve_connection_permission_user_level() {
     let f = setup().await;
 
@@ -411,6 +422,7 @@ async fn resolve_connection_permission_user_level() {
 }
 
 #[tokio::test]
+#[serial]
 async fn resolve_connection_permission_group_level() {
     let f = setup().await;
 
@@ -464,6 +476,7 @@ async fn resolve_connection_permission_group_level() {
 }
 
 #[tokio::test]
+#[serial]
 async fn resolve_table_permission_super_admin() {
     let f = setup().await;
 
@@ -479,6 +492,7 @@ async fn resolve_table_permission_super_admin() {
 }
 
 #[tokio::test]
+#[serial]
 async fn resolve_table_permission_with_table_override() {
     let f = setup().await;
 

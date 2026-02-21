@@ -1,9 +1,9 @@
-mod common;
-
+use crate::common;
 use dbworks_backend::infrastructure::database::{group_repo, organization_repo, user_repo};
 use dbworks_backend::presentation::request::{
     CreateGroupRequest, CreateOrganizationRequest, CreateUserRequest,
 };
+use serial_test::serial;
 
 async fn setup_org_and_users(
     pool: &sqlx::PgPool,
@@ -49,6 +49,7 @@ async fn setup_org_and_users(
 }
 
 #[tokio::test]
+#[serial]
 async fn create_and_list_groups() {
     let pool = common::setup_test_db().await;
     let (org, _, _) = setup_org_and_users(&pool).await;
@@ -72,6 +73,7 @@ async fn create_and_list_groups() {
 }
 
 #[tokio::test]
+#[serial]
 async fn add_and_list_group_members() {
     let pool = common::setup_test_db().await;
     let (org, alice, bob) = setup_org_and_users(&pool).await;
@@ -105,6 +107,7 @@ async fn add_and_list_group_members() {
 }
 
 #[tokio::test]
+#[serial]
 async fn add_group_member_idempotent() {
     let pool = common::setup_test_db().await;
     let (org, alice, _) = setup_org_and_users(&pool).await;
@@ -135,6 +138,7 @@ async fn add_group_member_idempotent() {
 }
 
 #[tokio::test]
+#[serial]
 async fn remove_group_member() {
     let pool = common::setup_test_db().await;
     let (org, alice, _) = setup_org_and_users(&pool).await;

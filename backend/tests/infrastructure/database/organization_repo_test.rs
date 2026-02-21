@@ -1,9 +1,10 @@
-mod common;
-
+use crate::common;
 use dbworks_backend::infrastructure::database::organization_repo;
 use dbworks_backend::presentation::request::CreateOrganizationRequest;
+use serial_test::serial;
 
 #[tokio::test]
+#[serial]
 async fn create_organization() {
     let pool = common::setup_test_db().await;
 
@@ -19,6 +20,7 @@ async fn create_organization() {
 }
 
 #[tokio::test]
+#[serial]
 async fn list_organizations_returns_all() {
     let pool = common::setup_test_db().await;
 
@@ -36,6 +38,7 @@ async fn list_organizations_returns_all() {
 }
 
 #[tokio::test]
+#[serial]
 async fn get_organization_found() {
     let pool = common::setup_test_db().await;
 
@@ -54,6 +57,7 @@ async fn get_organization_found() {
 }
 
 #[tokio::test]
+#[serial]
 async fn get_organization_not_found() {
     let pool = common::setup_test_db().await;
 

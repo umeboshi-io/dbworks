@@ -1,7 +1,7 @@
-mod common;
-
+use crate::common;
 use dbworks_backend::infrastructure::database::{organization_repo, user_repo};
 use dbworks_backend::presentation::request::{CreateOrganizationRequest, CreateUserRequest};
+use serial_test::serial;
 
 async fn create_test_org(
     pool: &sqlx::PgPool,
@@ -15,6 +15,7 @@ async fn create_test_org(
 }
 
 #[tokio::test]
+#[serial]
 async fn create_user() {
     let pool = common::setup_test_db().await;
     let org = create_test_org(&pool).await;
@@ -33,6 +34,7 @@ async fn create_user() {
 }
 
 #[tokio::test]
+#[serial]
 async fn list_users_by_org() {
     let pool = common::setup_test_db().await;
     let org_a = create_test_org(&pool).await;
@@ -70,6 +72,7 @@ async fn list_users_by_org() {
 }
 
 #[tokio::test]
+#[serial]
 async fn get_user_found_and_not_found() {
     let pool = common::setup_test_db().await;
     let org = create_test_org(&pool).await;

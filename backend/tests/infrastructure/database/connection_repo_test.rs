@@ -1,9 +1,9 @@
-mod common;
-
+use crate::common;
 use dbworks_backend::domain::connection::ConnectionInfo;
 use dbworks_backend::infrastructure::crypto::Encryptor;
 use dbworks_backend::infrastructure::database::{connection_repo, organization_repo, user_repo};
 use dbworks_backend::presentation::request::{CreateOrganizationRequest, CreateUserRequest};
+use serial_test::serial;
 use uuid::Uuid;
 
 async fn setup_org_and_user(
@@ -62,6 +62,7 @@ fn make_connection_info(org_id: Option<Uuid>, owner_id: Option<Uuid>) -> Connect
 }
 
 #[tokio::test]
+#[serial]
 async fn save_and_list_connections() {
     let pool = common::setup_test_db().await;
     let (org, user) = setup_org_and_user(&pool).await;
@@ -95,6 +96,7 @@ async fn save_and_list_connections() {
 }
 
 #[tokio::test]
+#[serial]
 async fn save_connection_with_owner_user_id() {
     let pool = common::setup_test_db().await;
     let (org, user) = setup_org_and_user(&pool).await;
@@ -109,6 +111,7 @@ async fn save_connection_with_owner_user_id() {
 }
 
 #[tokio::test]
+#[serial]
 async fn delete_saved_connection() {
     let pool = common::setup_test_db().await;
     let (org, user) = setup_org_and_user(&pool).await;
@@ -131,6 +134,7 @@ async fn delete_saved_connection() {
 }
 
 #[tokio::test]
+#[serial]
 async fn delete_nonexistent_connection_returns_false() {
     let pool = common::setup_test_db().await;
 
