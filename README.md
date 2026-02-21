@@ -161,6 +161,12 @@ dbworks/
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## � Contributors
+
+<a href="https://github.com/umeboshi-io/dbworks/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=umeboshi-io/dbworks" />
+</a>
+
+## �📄 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
