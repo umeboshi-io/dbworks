@@ -56,6 +56,8 @@ pub struct ConnectionRequest {
     pub database: String,
     pub user: String,
     pub password: String,
+    /// Optional scope: "personal" or "org:<uuid>"
+    pub scope: Option<String>,
 }
 
 fn default_db_type() -> String {

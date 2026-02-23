@@ -327,6 +327,7 @@ function App() {
           {!showOrgPage && showConnectionForm && selectedDbType && (
             <ConnectionPage
               dbType={selectedDbType}
+              scope={scope}
               onCreated={handleConnectionCreated}
               onCancel={() => { setShowConnectionForm(false); setSelectedDbType(null); }}
               onBack={() => { setShowConnectionForm(false); setShowDbTypeSelect(true); }}

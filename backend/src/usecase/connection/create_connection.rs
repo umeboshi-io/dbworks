@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::domain::connection::ConnectionInfo;
 use crate::domain::user::AppUser;
 use crate::presentation::state::ConnectionManager;
@@ -15,9 +17,12 @@ pub async fn create_connection(
     database: String,
     user: String,
     password: String,
+    scope_org_id: Option<Uuid>,
 ) -> Result<ConnectionInfo, UsecaseError> {
-    // Determine ownership: org user → org connection (requires super_admin), no org → personal
-    let (organization_id, owner_user_id) = if let Some(org_id) = caller.organization_id {
+    // Use explicit scope_org_id if provided, otherwise fall back to caller's org
+    let (organization_id, owner_user_id) = if let Some(org_id) = scope_org_id {
+        (Some(org_id), None)
+    } else if let Some(org_id) = caller.organization_id {
         require_super_admin(caller)?;
         (Some(org_id), None)
     } else {

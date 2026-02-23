@@ -54,6 +54,7 @@ export interface ConnectionRequest {
   database: string;
   user: string;
   password: string;
+  scope?: string;
   organization_id?: string;
 }
 
