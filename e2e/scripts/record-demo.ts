@@ -71,14 +71,14 @@ async function main() {
   await page.getByRole('button', { name: /^connect$/i }).click();
   await page.waitForTimeout(3000);
 
-  // Step 7: Browse tables
-  await page.getByText('app_users').click();
-  await page.waitForTimeout(3000);
-
+  // Step 7: Browse tables (skip app_users to avoid showing personal data)
   await page.getByText('organizations').click();
   await page.waitForTimeout(3000);
 
   await page.getByText('organization_members').click();
+  await page.waitForTimeout(3000);
+
+  await page.getByText('groups').click();
   await page.waitForTimeout(3000);
 
   // Close to finalize video
