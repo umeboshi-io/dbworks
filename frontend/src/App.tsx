@@ -225,6 +225,9 @@ function App() {
         </div>
 
         <div className="conn-topbar-right">
+          <button className="btn-icon" onClick={toggleLanguage} title="Language">
+            🌐
+          </button>
           <button
             className="conn-manager-btn"
             onClick={() => setShowConnModal(true)}
@@ -238,9 +241,6 @@ function App() {
           </button>
           <button className="btn-icon" onClick={() => setShowOrgPage(true)} title={t('common.manageOrgs')}>
             ⚙
-          </button>
-          <button className="btn-icon" onClick={toggleLanguage} title="Language">
-            🌐
           </button>
           <button className="btn-icon" onClick={logout} title={t('common.logout')}>
             ⏻
