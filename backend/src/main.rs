@@ -21,6 +21,11 @@ async fn main() {
     // Load .env if present
     let _ = dotenvy::dotenv();
 
+    // Install rustls crypto provider before any TLS usage (reqwest, jsonwebtoken, sqlx)
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls CryptoProvider");
+
     // Initialize tracing/logging
     tracing_subscriber::fmt()
         .with_env_filter(
