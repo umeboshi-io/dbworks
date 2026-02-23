@@ -21,7 +21,7 @@ base64 = "0.22"
 rand = "0.10"
 dotenvy = "0.15"
 oauth2 = "4"
-jsonwebtoken = "9"
+jsonwebtoken = "10"
 reqwest = { version = "0.13", features = ["json"] }
 
 [dev-dependencies]
