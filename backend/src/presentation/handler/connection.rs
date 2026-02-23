@@ -24,8 +24,12 @@ pub async fn create_connection(
     headers: HeaderMap,
     Json(req): Json<ConnectionRequest>,
 ) -> impl IntoResponse {
-    let port = req.port.unwrap_or(5432);
-    tracing::info!(name = %req.name, host = %req.host, port = port, database = %req.database, "POST /api/connections");
+    let default_port = match req.db_type.as_str() {
+        "mysql" => 3306,
+        _ => 5432,
+    };
+    let port = req.port.unwrap_or(default_port);
+    tracing::info!(name = %req.name, db_type = %req.db_type, host = %req.host, port = port, database = %req.database, "POST /api/connections");
 
     let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
@@ -38,6 +42,7 @@ pub async fn create_connection(
         &state.connection_manager,
         &caller,
         req.name,
+        req.db_type,
         req.host,
         port,
         req.database,

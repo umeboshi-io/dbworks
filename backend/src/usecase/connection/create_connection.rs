@@ -9,6 +9,7 @@ pub async fn create_connection(
     connection_manager: &ConnectionManager,
     caller: &AppUser,
     name: String,
+    db_type: String,
     host: String,
     port: u16,
     database: String,
@@ -23,17 +24,42 @@ pub async fn create_connection(
         (None, Some(caller.id))
     };
 
-    connection_manager
-        .add_postgres(
-            name,
-            host,
-            port,
-            database,
-            user,
-            password,
-            organization_id,
-            owner_user_id,
-        )
-        .await
-        .map_err(|e| UsecaseError::BadRequest(e.to_string()))
+    let result = match db_type.as_str() {
+        "mysql" => {
+            connection_manager
+                .add_mysql(
+                    name,
+                    host,
+                    port,
+                    database,
+                    user,
+                    password,
+                    organization_id,
+                    owner_user_id,
+                )
+                .await
+        }
+        "postgres" => {
+            connection_manager
+                .add_postgres(
+                    name,
+                    host,
+                    port,
+                    database,
+                    user,
+                    password,
+                    organization_id,
+                    owner_user_id,
+                )
+                .await
+        }
+        other => {
+            return Err(UsecaseError::BadRequest(format!(
+                "Unsupported database type: '{}'. Supported types: postgres, mysql",
+                other
+            )));
+        }
+    };
+
+    result.map_err(|e| UsecaseError::BadRequest(e.to_string()))
 }

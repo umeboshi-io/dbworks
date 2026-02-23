@@ -49,11 +49,17 @@ pub struct AddGroupMemberRequest {
 #[derive(Debug, Deserialize)]
 pub struct ConnectionRequest {
     pub name: String,
+    #[serde(default = "default_db_type")]
+    pub db_type: String,
     pub host: String,
     pub port: Option<u16>,
     pub database: String,
     pub user: String,
     pub password: String,
+}
+
+fn default_db_type() -> String {
+    "postgres".to_string()
 }
 
 // ============================================================

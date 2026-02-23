@@ -63,6 +63,10 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
   }, [connectionId, tableName, page, perPage, sortBy, sortOrder, activeFilter]);
 
   useEffect(() => {
+    // Reset all query state and schema when table/connection changes.
+    // Setting schema to null prevents loadRows from firing with stale sort/filter.
+    setSchema(null);
+    setRowsData(null);
     setPage(1);
     setSortBy(null);
     setSortOrder('asc');
@@ -70,6 +74,7 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
     setFilterColumn('');
     setFilterOp('like');
     setFilterValue('');
+    setError(null);
     loadSchema();
   }, [connectionId, tableName, loadSchema]);
 

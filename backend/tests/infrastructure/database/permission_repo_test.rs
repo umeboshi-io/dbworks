@@ -62,6 +62,7 @@ async fn setup() -> TestFixture {
     let info = ConnectionInfo {
         id: Uuid::new_v4(),
         name: "test-conn".to_string(),
+        db_type: "postgres".to_string(),
         host: "localhost".to_string(),
         port: 5432,
         database: "testdb".to_string(),

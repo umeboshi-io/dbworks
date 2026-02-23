@@ -13,6 +13,7 @@ use crate::domain::repository::{
 use crate::infrastructure::auth::oauth::OAuthClients;
 use crate::infrastructure::crypto::Encryptor;
 use crate::infrastructure::datasource::DataSource;
+use crate::infrastructure::datasource::mysql::MySqlDataSource;
 use crate::infrastructure::datasource::postgres::PostgresDataSource;
 
 pub struct AppStateInner {
@@ -89,16 +90,42 @@ impl ConnectionManager {
                 }
             };
 
-            let conn_string = format!(
-                "postgres://{}:{}@{}:{}/{}",
-                row.username, password, row.host, row.port, row.database_name
-            );
+            let db_type = row.db_type.as_str();
+            let conn_string = match db_type {
+                "mysql" => format!(
+                    "mysql://{}:{}@{}:{}/{}",
+                    row.username, password, row.host, row.port, row.database_name
+                ),
+                "postgres" => format!(
+                    "postgres://{}:{}@{}:{}/{}",
+                    row.username, password, row.host, row.port, row.database_name
+                ),
+                other => {
+                    tracing::error!(
+                        connection_id = %row.id,
+                        db_type = %other,
+                        "Unsupported db_type in saved connection, skipping"
+                    );
+                    continue;
+                }
+            };
 
-            match PostgresDataSource::new(&conn_string).await {
+            let datasource_result: Result<Arc<dyn DataSource>, _> = match db_type {
+                "mysql" => MySqlDataSource::new(&conn_string)
+                    .await
+                    .map(|ds| Arc::new(ds) as Arc<dyn DataSource>),
+                "postgres" => PostgresDataSource::new(&conn_string)
+                    .await
+                    .map(|ds| Arc::new(ds) as Arc<dyn DataSource>),
+                _ => unreachable!(), // already handled above
+            };
+
+            match datasource_result {
                 Ok(ds) => {
                     let info = ConnectionInfo {
                         id: row.id,
                         name: row.name.clone(),
+                        db_type: row.db_type.clone(),
                         host: row.host.clone(),
                         port: row.port as u16,
                         database: row.database_name.clone(),
@@ -109,12 +136,13 @@ impl ConnectionManager {
                     };
                     let entry = ConnectionEntry {
                         info,
-                        datasource: Arc::new(ds),
+                        datasource: ds,
                     };
                     self.connections.write().await.insert(row.id, entry);
                     tracing::info!(
                         connection_id = %row.id,
                         name = %row.name,
+                        db_type = %row.db_type,
                         "Loaded saved connection"
                     );
                 }
@@ -181,6 +209,88 @@ impl ConnectionManager {
         let info = ConnectionInfo {
             id,
             name,
+            db_type: "postgres".to_string(),
+            host,
+            port,
+            database,
+            user,
+            password: password.clone(),
+            organization_id,
+            owner_user_id,
+        };
+
+        // Persist to DB if configured
+        if let Some(repo) = &self.connection_repo {
+            if let Err(e) = repo
+                .save(organization_id.as_ref(), owner_user_id.as_ref(), &info)
+                .await
+            {
+                tracing::error!(error = %e, "Failed to persist connection to DB");
+                return Err(e);
+            }
+            tracing::info!(connection_id = %id, "Connection persisted to DB");
+        }
+
+        let entry = ConnectionEntry {
+            info: info.clone(),
+            datasource: Arc::new(datasource),
+        };
+
+        self.connections.write().await.insert(id, entry);
+        tracing::info!(connection_id = %id, "Connection registered");
+        Ok(info)
+    }
+
+    /// Register a new MySQL connection and persist it.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn add_mysql(
+        &self,
+        name: String,
+        host: String,
+        port: u16,
+        database: String,
+        user: String,
+        password: String,
+        organization_id: Option<Uuid>,
+        owner_user_id: Option<Uuid>,
+    ) -> anyhow::Result<ConnectionInfo> {
+        let conn_string = format!(
+            "mysql://{}:{}@{}:{}/{}",
+            user, password, host, port, database
+        );
+
+        tracing::info!(
+            name = %name,
+            host = %host,
+            port = %port,
+            database = %database,
+            user = %user,
+            "Attempting to connect to MySQL..."
+        );
+
+        let datasource = match MySqlDataSource::new(&conn_string).await {
+            Ok(ds) => {
+                tracing::info!(name = %name, "Successfully connected to MySQL");
+                ds
+            }
+            Err(e) => {
+                tracing::error!(
+                    name = %name,
+                    host = %host,
+                    port = %port,
+                    database = %database,
+                    error = %e,
+                    "Failed to connect to MySQL"
+                );
+                return Err(e);
+            }
+        };
+
+        let id = Uuid::new_v4();
+        let info = ConnectionInfo {
+            id,
+            name,
+            db_type: "mysql".to_string(),
             host,
             port,
             database,
@@ -332,6 +442,7 @@ mod tests {
         let info = ConnectionInfo {
             id,
             name: "test".to_string(),
+            db_type: "postgres".to_string(),
             host: "localhost".to_string(),
             port: 5432,
             database: "db".to_string(),

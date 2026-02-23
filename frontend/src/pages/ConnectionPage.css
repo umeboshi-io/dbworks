@@ -18,6 +18,28 @@
 
 .card-header {
   margin-bottom: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.card-header-top {
+  margin-bottom: 0.75rem;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.btn-back:hover {
+  color: var(--accent);
 }
 
 .card-header h2 {

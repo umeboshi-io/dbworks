@@ -48,6 +48,7 @@ export interface CreateGroupRequest {
 // ---- Connection ----
 export interface ConnectionRequest {
   name: string;
+  db_type?: string;
   host: string;
   port: number;
   database: string;
@@ -59,6 +60,7 @@ export interface ConnectionRequest {
 export interface Connection {
   id: string;
   name: string;
+  db_type?: string;
   host: string;
   port: number;
   database: string;

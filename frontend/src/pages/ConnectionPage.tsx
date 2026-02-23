@@ -4,8 +4,10 @@ import type { Connection } from '../types';
 import './ConnectionPage.css';
 
 interface ConnectionPageProps {
+  dbType: string;
   onCreated: (conn: Connection) => void;
   onCancel: () => void;
+  onBack: () => void;
 }
 
 interface ConnectionForm {
@@ -17,11 +19,18 @@ interface ConnectionForm {
   password: string;
 }
 
-function ConnectionPage({ onCreated, onCancel }: ConnectionPageProps) {
+const DB_DEFAULTS: Record<string, { port: string; user: string; label: string }> = {
+  postgres: { port: '5432', user: 'postgres', label: 'PostgreSQL' },
+  mysql: { port: '3306', user: 'root', label: 'MySQL' },
+};
+
+function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageProps) {
+  const defaults = DB_DEFAULTS[dbType] ?? DB_DEFAULTS.postgres;
+
   const [form, setForm] = useState<ConnectionForm>({
     name: '',
     host: 'localhost',
-    port: '5432',
+    port: defaults.port,
     database: '',
     user: '',
     password: '',
@@ -40,6 +49,7 @@ function ConnectionPage({ onCreated, onCancel }: ConnectionPageProps) {
     try {
       const conn = await api.createConnection({
         ...form,
+        db_type: dbType,
         port: parseInt(form.port, 10),
       });
       onCreated(conn);
@@ -54,8 +64,13 @@ function ConnectionPage({ onCreated, onCancel }: ConnectionPageProps) {
     <div className="connection-page">
       <div className="connection-card">
         <div className="card-header">
-          <h2>New Database Connection</h2>
-          <p>Enter your PostgreSQL connection details</p>
+          <div className="card-header-top">
+            <button className="btn-back" onClick={onBack} title="Back to DB type selection">
+              ← Back
+            </button>
+          </div>
+          <h2>New {defaults.label} Connection</h2>
+          <p>Enter your {defaults.label} connection details</p>
         </div>
         {error && <div className="alert alert-error">{error}</div>}
         <form onSubmit={handleSubmit}>
@@ -92,7 +107,7 @@ function ConnectionPage({ onCreated, onCancel }: ConnectionPageProps) {
                 name="port"
                 value={form.port}
                 onChange={handleChange}
-                placeholder="5432"
+                placeholder={defaults.port}
                 required
               />
             </div>
@@ -118,7 +133,7 @@ function ConnectionPage({ onCreated, onCancel }: ConnectionPageProps) {
                 name="user"
                 value={form.user}
                 onChange={handleChange}
-                placeholder="postgres"
+                placeholder={defaults.user}
                 required
               />
             </div>

@@ -91,6 +91,7 @@ async fn create_connection_org_admin() {
         &f.cm,
         &f.admin,
         "test-conn".into(),
+        "postgres".into(),
         host,
         port,
         database,
@@ -115,6 +116,7 @@ async fn create_connection_org_member_forbidden() {
         &f.cm,
         &f.member,
         "test-conn".into(),
+        "postgres".into(),
         "localhost".into(),
         5432,
         "testdb".into(),
@@ -137,6 +139,7 @@ async fn list_connections_all() {
         &f.cm,
         &f.admin,
         "test-conn".into(),
+        "postgres".into(),
         host,
         port,
         database,
@@ -163,6 +166,7 @@ async fn list_connections_by_org() {
         &f.cm,
         &f.admin,
         "org-conn".into(),
+        "postgres".into(),
         host,
         port,
         database,
@@ -201,6 +205,7 @@ async fn delete_connection_as_super_admin() {
         &f.cm,
         &f.admin,
         "to-delete".into(),
+        "postgres".into(),
         host,
         port,
         database,
@@ -239,4 +244,85 @@ async fn delete_connection_not_found() {
     let result = usecase::connection::delete_connection(&f.cm, &f.admin, &Uuid::new_v4()).await;
 
     assert!(matches!(result.unwrap_err(), UsecaseError::NotFound(_)));
+}
+
+#[tokio::test]
+#[serial]
+async fn create_connection_unsupported_db_type_error() {
+    let f = setup().await;
+
+    let result = usecase::connection::create_connection(
+        &f.cm,
+        &f.admin,
+        "test-conn".into(),
+        "sqlite".into(), // unsupported
+        "localhost".into(),
+        5432,
+        "testdb".into(),
+        "user".into(),
+        "pass".into(),
+    )
+    .await;
+
+    assert!(matches!(result.unwrap_err(), UsecaseError::BadRequest(_)));
+}
+
+#[tokio::test]
+#[serial]
+async fn create_connection_db_type_mysql_attempts_mysql() {
+    let f = setup().await;
+
+    // No MySQL server is available in test, so the connection will fail,
+    // but the error should come from the MySQL driver (not from an unsupported db_type check).
+    let result = usecase::connection::create_connection(
+        &f.cm,
+        &f.admin,
+        "mysql-conn".into(),
+        "mysql".into(),
+        "localhost".into(),
+        13306, // use a port that nothing listens on
+        "testdb".into(),
+        "user".into(),
+        "pass".into(),
+    )
+    .await;
+
+    // Should fail with a connection error (BadRequest wrapping the driver error),
+    // NOT an "unsupported db type" error
+    match result {
+        Err(UsecaseError::BadRequest(msg)) => {
+            assert!(
+                !msg.contains("Unsupported database type"),
+                "Should not be an unsupported type error, got: {}",
+                msg
+            );
+        }
+        Ok(_) => {
+            // Unexpectedly connected — that's fine, test still verifies dispatch
+        }
+        Err(e) => panic!("Unexpected error variant: {:?}", e),
+    }
+}
+
+#[tokio::test]
+#[serial]
+async fn create_connection_postgres_has_db_type_field() {
+    let f = setup().await;
+    let (host, port, database, user, password) = parse_db_url();
+
+    let conn = usecase::connection::create_connection(
+        &f.cm,
+        &f.admin,
+        "pg-conn".into(),
+        "postgres".into(),
+        host,
+        port,
+        database,
+        user,
+        password,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(conn.db_type, "postgres");
 }

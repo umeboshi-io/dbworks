@@ -51,8 +51,11 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
     <div className="org-page">
       <div className="org-card">
         <div className="card-header">
-          <h2>Organizations</h2>
-          <p>チームで DB を共有するための組織を管理します</p>
+          <div>
+            <h2>Organizations</h2>
+            <p>チームで DB を共有するための組織を管理します</p>
+          </div>
+          <button className="modal-close" onClick={onClose} title="Close">×</button>
         </div>
 
         <div className="org-tabs">

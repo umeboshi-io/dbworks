@@ -27,13 +27,14 @@ impl ConnectionRepository for PgConnectionRepository {
     ) -> anyhow::Result<SavedConnectionRow> {
         let encrypted_password = self.encryptor.encrypt(&info.password)?;
         let row = sqlx::query_as::<_, SavedConnectionRow>(
-            r#"INSERT INTO saved_connections (id, organization_id, name, host, port, database_name, username, encrypted_password, created_by, owner_user_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            r#"INSERT INTO saved_connections (id, organization_id, name, db_type, host, port, database_name, username, encrypted_password, created_by, owner_user_id)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                RETURNING *"#,
         )
         .bind(info.id)
         .bind(org_id)
         .bind(&info.name)
+        .bind(&info.db_type)
         .bind(&info.host)
         .bind(info.port as i32)
         .bind(&info.database)
