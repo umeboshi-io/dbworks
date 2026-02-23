@@ -97,6 +97,7 @@ async fn create_connection_org_admin() {
         database,
         user,
         password,
+        None,
     )
     .await
     .unwrap();
@@ -122,6 +123,7 @@ async fn create_connection_org_member_forbidden() {
         "testdb".into(),
         "user".into(),
         "pass".into(),
+        None,
     )
     .await;
 
@@ -145,6 +147,7 @@ async fn list_connections_all() {
         database,
         user,
         password,
+        None,
     )
     .await
     .unwrap();
@@ -172,6 +175,7 @@ async fn list_connections_by_org() {
         database,
         user,
         password,
+        None,
     )
     .await
     .unwrap();
@@ -211,6 +215,7 @@ async fn delete_connection_as_super_admin() {
         database,
         user,
         password,
+        None,
     )
     .await
     .unwrap();
@@ -261,6 +266,7 @@ async fn create_connection_unsupported_db_type_error() {
         "testdb".into(),
         "user".into(),
         "pass".into(),
+        None,
     )
     .await;
 
@@ -284,6 +290,7 @@ async fn create_connection_db_type_mysql_attempts_mysql() {
         "testdb".into(),
         "user".into(),
         "pass".into(),
+        None,
     )
     .await;
 
@@ -320,6 +327,7 @@ async fn create_connection_postgres_has_db_type_field() {
         database,
         user,
         password,
+        None,
     )
     .await
     .unwrap();
