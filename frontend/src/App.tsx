@@ -6,6 +6,7 @@ import OrganizationPage from './pages/OrganizationPage';
 import TablePage from './pages/TablePage';
 import LoginPage from './pages/LoginPage';
 import OrgSelector from './components/OrgSelector';
+import LanguageSelector from './components/LanguageSelector';
 import type { Scope } from './components/OrgSelector';
 import { useAuth } from './AuthContext';
 import { api } from './api/client';
@@ -14,11 +15,7 @@ import './App.css';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
-  const { t, i18n } = useTranslation();
-
-  const toggleLanguage = () => {
-    i18n.changeLanguage(i18n.language === 'ja' ? 'en' : 'ja');
-  };
+  const { t } = useTranslation();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [openTabs, setOpenTabs] = useState<Connection[]>([]);
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
@@ -225,9 +222,7 @@ function App() {
         </div>
 
         <div className="conn-topbar-right">
-          <button className="btn-icon" onClick={toggleLanguage} title="Language">
-            🌐
-          </button>
+          <LanguageSelector />
           <button
             className="conn-manager-btn"
             onClick={() => setShowConnModal(true)}
