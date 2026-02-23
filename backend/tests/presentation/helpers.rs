@@ -69,3 +69,28 @@ pub async fn seed_connection(pool: &sqlx::PgPool, org_id: &uuid::Uuid) -> uuid::
     .expect("Failed to seed saved_connection");
     conn_id
 }
+
+/// Seed an organization + user with org owner membership. Returns (org_id, user_id).
+pub async fn seed_org_and_owner(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
+    use dbworks_backend::domain::repository::{
+        OrganizationMemberRepository, OrganizationRepository, UserRepository,
+    };
+    use dbworks_backend::infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
+    use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
+    use dbworks_backend::infrastructure::database::user_repo::PgUserRepository;
+
+    let org_repo = PgOrganizationRepository::new(pool.clone());
+    let user_repo = PgUserRepository::new(pool.clone());
+    let org_member_repo = PgOrganizationMemberRepository::new(pool.clone());
+
+    let org = org_repo.create("Org").await.unwrap();
+    let admin = user_repo
+        .create("Admin", "admin@test.com", "member")
+        .await
+        .unwrap();
+    org_member_repo
+        .add_member(&org.id, &admin.id, "owner")
+        .await
+        .unwrap();
+    (org.id, admin.id)
+}

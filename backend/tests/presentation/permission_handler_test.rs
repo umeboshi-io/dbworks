@@ -1,9 +1,10 @@
 use crate::common;
-use crate::presentation::helpers::{build_test_app, seed_connection};
+use crate::presentation::helpers::{build_test_app, seed_connection, seed_org_and_owner};
 
 use dbworks_backend::domain::repository::{
-    OrganizationRepository, PermissionRepository, UserRepository,
+    OrganizationMemberRepository, OrganizationRepository, PermissionRepository, UserRepository,
 };
+use dbworks_backend::infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
 use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
 use dbworks_backend::infrastructure::database::permission_repo::PgPermissionRepository;
 use dbworks_backend::infrastructure::database::user_repo::PgUserRepository;
@@ -12,22 +13,11 @@ use http_body_util::BodyExt;
 use serial_test::serial;
 use tower::ServiceExt;
 
-async fn seed(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
-    let org_repo = PgOrganizationRepository::new(pool.clone());
-    let user_repo = PgUserRepository::new(pool.clone());
-    let org = org_repo.create("Org").await.unwrap();
-    let admin = user_repo
-        .create("Admin", "admin@test.com", "super_admin")
-        .await
-        .unwrap();
-    (org.id, admin.id)
-}
-
 #[tokio::test]
 #[serial]
 async fn grant_user_conn_permission_returns_201() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     let user_repo = PgUserRepository::new(pool.clone());
     let target = user_repo
@@ -35,7 +25,6 @@ async fn grant_user_conn_permission_returns_201() {
         .await
         .unwrap();
 
-    // Seed a connection record to satisfy FK constraint
     let conn_id = seed_connection(&pool, &org_id).await;
 
     let app = build_test_app(pool);
@@ -68,12 +57,22 @@ async fn grant_user_conn_permission_as_member_returns_403() {
     let pool = common::setup_test_db().await;
     let org_repo = PgOrganizationRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
+    let org_member_repo = PgOrganizationMemberRepository::new(pool.clone());
 
-    let _org = org_repo.create("Org").await.unwrap();
+    let org = org_repo.create("Org").await.unwrap();
+
+    // Create a member (not owner)
     let member = user_repo
         .create("Member", "member@test.com", "member")
         .await
         .unwrap();
+    org_member_repo
+        .add_member(&org.id, &member.id, "member")
+        .await
+        .unwrap();
+
+    // Seed a connection owned by the org
+    let conn_id = seed_connection(&pool, &org.id).await;
 
     let app = build_test_app(pool);
 
@@ -83,10 +82,7 @@ async fn grant_user_conn_permission_as_member_returns_403() {
     });
     let req = Request::builder()
         .method("POST")
-        .uri(format!(
-            "/api/connections/{}/user-permissions",
-            uuid::Uuid::new_v4()
-        ))
+        .uri(format!("/api/connections/{}/user-permissions", conn_id))
         .header("Content-Type", "application/json")
         .header("X-User-Id", member.id.to_string())
         .body(axum::body::Body::from(serde_json::to_vec(&body).unwrap()))
@@ -120,14 +116,18 @@ async fn list_user_conn_permissions_returns_200() {
 #[serial]
 async fn revoke_user_conn_permission_not_found_returns_404() {
     let pool = common::setup_test_db().await;
-    let (_, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
+
+    // Seed a connection so require_conn_owner can find it
+    let conn_id = seed_connection(&pool, &org_id).await;
+
     let app = build_test_app(pool);
 
     let req = Request::builder()
         .method("DELETE")
         .uri(format!(
             "/api/connections/{}/user-permissions/{}",
-            uuid::Uuid::new_v4(),
+            conn_id,
             uuid::Uuid::new_v4()
         ))
         .header("X-User-Id", admin_id.to_string())
@@ -142,7 +142,7 @@ async fn revoke_user_conn_permission_not_found_returns_404() {
 #[serial]
 async fn grant_and_revoke_user_conn_permission() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     let user_repo = PgUserRepository::new(pool.clone());
     let permission_repo = PgPermissionRepository::new(pool.clone());
@@ -151,7 +151,6 @@ async fn grant_and_revoke_user_conn_permission() {
         .await
         .unwrap();
 
-    // Seed a connection record to satisfy FK
     let conn_id = seed_connection(&pool, &org_id).await;
 
     // Grant permission via repo
@@ -181,7 +180,7 @@ async fn grant_and_revoke_user_conn_permission() {
 #[serial]
 async fn grant_group_conn_permission_returns_201() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     use dbworks_backend::domain::repository::GroupRepository;
     use dbworks_backend::infrastructure::database::group_repo::PgGroupRepository;
@@ -189,7 +188,6 @@ async fn grant_group_conn_permission_returns_201() {
     let group_repo = PgGroupRepository::new(pool.clone());
     let group = group_repo.create(&org_id, "Team", None).await.unwrap();
 
-    // Seed a connection record to satisfy FK
     let conn_id = seed_connection(&pool, &org_id).await;
 
     let app = build_test_app(pool);
