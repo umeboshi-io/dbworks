@@ -17,7 +17,23 @@ function App() {
   const { user, isLoading, logout } = useAuth();
   const { t } = useTranslation();
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [openTabs, setOpenTabs] = useState<Connection[]>([]);
+  const [scope, setScope] = useState<Scope>(
+    () => (sessionStorage.getItem('dbw:scope') as Scope) || 'personal'
+  );
+  const [scopedTabs, setScopedTabs] = useState<Record<string, Connection[]>>(
+    () => {
+      const saved = sessionStorage.getItem('dbw:scopedTabs');
+      return saved ? JSON.parse(saved) : {};
+    }
+  );
+  const openTabs = scopedTabs[scope] || [];
+  const setOpenTabs = (updater: Connection[] | ((prev: Connection[]) => Connection[])) => {
+    setScopedTabs((prev) => {
+      const current = prev[scope] || [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [scope]: next };
+    });
+  };
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(
@@ -30,9 +46,6 @@ function App() {
   const [showConnModal, setShowConnModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tablesOpen, setTablesOpen] = useState(true);
-  const [scope, setScope] = useState<Scope>(
-    () => (sessionStorage.getItem('dbw:scope') as Scope) || 'personal'
-  );
 
   // Skip sessionStorage saves until initial restore is complete
   const restoredRef = useRef(false);
@@ -63,32 +76,32 @@ function App() {
 
   useEffect(() => {
     if (!restoredRef.current) return;
-    const tabIds = openTabs.map((t) => t.id);
-    sessionStorage.setItem('dbw:openTabIds', JSON.stringify(tabIds));
-  }, [openTabs]);
+    sessionStorage.setItem('dbw:scopedTabs', JSON.stringify(scopedTabs));
+  }, [scopedTabs]);
 
   const loadConnections = useCallback(async (s: Scope) => {
     try {
       const data = await api.listConnections(s);
       setConnections(data);
 
-      // Restore open tabs and active connection from session
+      // Restore active connection from session
       if (!restoredRef.current) {
         restoredRef.current = true;
-        const savedTabIds = sessionStorage.getItem('dbw:openTabIds');
         const savedActiveId = sessionStorage.getItem('dbw:activeConnId');
 
-        if (savedTabIds) {
-          const ids: string[] = JSON.parse(savedTabIds);
-          const restored = ids
-            .map((id) => data.find((c: Connection) => c.id === id))
+        // Restore open tabs for current scope from scopedTabs
+        const currentScopeTabs = scopedTabs[s] || [];
+        if (currentScopeTabs.length > 0) {
+          // Re-validate tabs against loaded connections
+          const validTabs = currentScopeTabs
+            .map((tab: Connection) => data.find((c: Connection) => c.id === tab.id))
             .filter(Boolean) as Connection[];
-          if (restored.length > 0) {
-            setOpenTabs(restored);
-            if (savedActiveId) {
-              const active = restored.find((c) => c.id === savedActiveId);
-              if (active) setActiveConnection(active);
-            }
+          if (validTabs.length !== currentScopeTabs.length) {
+            setOpenTabs(validTabs);
+          }
+          if (savedActiveId) {
+            const active = validTabs.find((c) => c.id === savedActiveId);
+            if (active) setActiveConnection(active);
           }
         }
       }
