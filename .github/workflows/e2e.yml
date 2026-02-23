@@ -157,7 +157,7 @@ jobs:
   deploy-report:
     name: Deploy Report to GitHub Pages
     needs: e2e
-    if: always() && needs.e2e.result != 'skipped'
+    if: always() && needs.e2e.result != 'skipped' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     permissions:
