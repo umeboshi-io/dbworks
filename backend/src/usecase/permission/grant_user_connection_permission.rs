@@ -7,6 +7,7 @@ use crate::domain::repository::{
 use crate::domain::user::AppUser;
 use crate::usecase::error::{UsecaseError, require_conn_owner};
 
+#[allow(clippy::too_many_arguments)]
 pub async fn grant_user_connection_permission(
     permission_repo: &dyn PermissionRepository,
     org_member_repo: &dyn OrganizationMemberRepository,
