@@ -12,7 +12,7 @@
 
 ## 🎬 Demo
 
-<img src="docs/demo.webp" alt="DBWorks Demo — Connect to a database and browse tables" width="800" />
+<img src="docs/demo.gif" alt="DBWorks Demo — Connect to a database and browse tables" width="800" />
 
 ## ✨ Features
 
