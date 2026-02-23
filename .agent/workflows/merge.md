@@ -11,7 +11,9 @@ git add -A
 git commit -m "<type>: <description>"
 ```
 
-Commit message types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+Commit messages and PR titles **MUST** follow Conventional Commits. See the [conventional-commits skill](../skills/conventional-commits/SKILL.md) for the full spec and type decision guide.
+
+Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `style`, `perf`
 
 // turbo
 

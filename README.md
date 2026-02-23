@@ -10,6 +10,10 @@
 
 ---
 
+## 🎬 Demo
+
+<img src="docs/demo.gif" alt="DBWorks Demo — Connect to a database and browse tables" width="800" />
+
 ## ✨ Features
 
 - **Connect** to PostgreSQL databases with encrypted credentials (AES-256-GCM)

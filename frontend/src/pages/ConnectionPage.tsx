@@ -32,8 +32,8 @@ function ConnectionPage({ dbType, scope, onCreated, onCancel, onBack }: Connecti
 
   const [form, setForm] = useState<ConnectionForm>({
     name: '',
-    host: 'localhost',
-    port: defaults.port,
+    host: '',
+    port: '',
     database: '',
     user: '',
     password: '',
@@ -52,8 +52,9 @@ function ConnectionPage({ dbType, scope, onCreated, onCancel, onBack }: Connecti
     try {
       const conn = await api.createConnection({
         ...form,
+        host: form.host || 'localhost',
         db_type: dbType,
-        port: parseInt(form.port, 10),
+        port: parseInt(form.port || defaults.port, 10),
         scope,
       });
       onCreated(conn);
