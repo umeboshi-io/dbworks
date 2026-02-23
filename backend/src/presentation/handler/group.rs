@@ -29,6 +29,7 @@ pub async fn create_group(
 
     match usecase::group::create_group(
         &*state.group_repo,
+        &*state.org_member_repo,
         &caller,
         &org_id,
         &req.name,
@@ -65,8 +66,14 @@ pub async fn add_group_member(
         }
     };
 
-    match usecase::group::add_group_member(&*state.group_repo, &caller, &group_id, &req.user_id)
-        .await
+    match usecase::group::add_group_member(
+        &*state.group_repo,
+        &*state.org_member_repo,
+        &caller,
+        &group_id,
+        &req.user_id,
+    )
+    .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => into_response(e),
@@ -86,8 +93,14 @@ pub async fn remove_group_member(
         }
     };
 
-    match usecase::group::remove_group_member(&*state.group_repo, &caller, &group_id, &user_id)
-        .await
+    match usecase::group::remove_group_member(
+        &*state.group_repo,
+        &*state.org_member_repo,
+        &caller,
+        &group_id,
+        &user_id,
+    )
+    .await
     {
         Ok(true) => StatusCode::NO_CONTENT.into_response(),
         Ok(false) => (

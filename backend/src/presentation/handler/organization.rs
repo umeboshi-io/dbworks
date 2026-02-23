@@ -42,8 +42,18 @@ pub async fn create_organization(
     }
 }
 
-pub async fn list_organizations(State(state): State<AppState>) -> impl IntoResponse {
-    match usecase::organization::list_organizations(&*state.organization_repo).await {
+pub async fn list_organizations(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
+        Ok(u) => u,
+        Err(status) => {
+            return (status, Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
+        }
+    };
+
+    match usecase::organization::list_organizations(&*state.organization_repo, &caller).await {
         Ok(orgs) => Json(serde_json::json!(orgs)).into_response(),
         Err(e) => into_response(e),
     }

@@ -17,4 +17,6 @@ pub trait OrganizationMemberRepository: Send + Sync {
     async fn list_members(&self, org_id: &Uuid) -> anyhow::Result<Vec<OrganizationMember>>;
 
     async fn get_user_orgs(&self, user_id: &Uuid) -> anyhow::Result<Vec<OrganizationMember>>;
+
+    async fn get_role(&self, org_id: &Uuid, user_id: &Uuid) -> anyhow::Result<Option<String>>;
 }

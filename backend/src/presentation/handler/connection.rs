@@ -55,6 +55,7 @@ pub async fn create_connection(
 
     match usecase::connection::create_connection(
         &state.connection_manager,
+        &*state.org_member_repo,
         &caller,
         req.name,
         req.db_type,
@@ -115,7 +116,14 @@ pub async fn delete_connection(
         }
     };
 
-    match usecase::connection::delete_connection(&state.connection_manager, &caller, &conn_id).await
+    match usecase::connection::delete_connection(
+        &state.connection_manager,
+        &*state.org_member_repo,
+        &*state.conn_repo,
+        &caller,
+        &conn_id,
+    )
+    .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => into_response(e),

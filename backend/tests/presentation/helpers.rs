@@ -4,6 +4,8 @@ use axum::Router;
 use sqlx::PgPool;
 
 use dbworks_backend::infrastructure::auth::oauth::OAuthClients;
+use dbworks_backend::infrastructure::crypto::Encryptor;
+use dbworks_backend::infrastructure::database::connection_repo::PgConnectionRepository;
 use dbworks_backend::infrastructure::database::group_repo::PgGroupRepository;
 use dbworks_backend::infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
 use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
@@ -19,6 +21,11 @@ pub fn build_test_app(pool: PgPool) -> Router {
     let group_repo = Arc::new(PgGroupRepository::new(pool.clone()));
     let permission_repo = Arc::new(PgPermissionRepository::new(pool.clone()));
     let org_member_repo = Arc::new(PgOrganizationMemberRepository::new(pool.clone()));
+    let encryptor = {
+        unsafe { std::env::set_var("ENCRYPTION_KEY", "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleTEy") };
+        Encryptor::from_env().unwrap()
+    };
+    let conn_repo = Arc::new(PgConnectionRepository::new(pool.clone(), encryptor));
     let connection_manager = ConnectionManager::new(None, None);
 
     let oauth_clients = OAuthClients {
@@ -36,6 +43,7 @@ pub fn build_test_app(pool: PgPool) -> Router {
         group_repo,
         permission_repo,
         org_member_repo,
+        conn_repo,
     });
 
     create_router().with_state(state)

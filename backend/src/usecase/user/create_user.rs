@@ -2,8 +2,7 @@ use uuid::Uuid;
 
 use crate::domain::repository::{OrganizationMemberRepository, UserRepository};
 use crate::domain::user::AppUser;
-use crate::usecase::UsecaseError;
-use crate::usecase::error::require_super_admin;
+use crate::usecase::error::{UsecaseError, require_org_owner};
 
 pub async fn create_user(
     user_repo: &dyn UserRepository,
@@ -14,7 +13,7 @@ pub async fn create_user(
     email: &str,
     role: &str,
 ) -> Result<AppUser, UsecaseError> {
-    require_super_admin(caller)?;
+    require_org_owner(org_member_repo, &caller.id, org_id).await?;
 
     // Create the user
     let user = user_repo

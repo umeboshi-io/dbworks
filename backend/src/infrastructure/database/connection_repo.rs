@@ -63,4 +63,17 @@ impl ConnectionRepository for PgConnectionRepository {
             .await?;
         Ok(result.rows_affected() > 0)
     }
+
+    async fn get_ownership(
+        &self,
+        conn_id: &Uuid,
+    ) -> anyhow::Result<Option<(Option<Uuid>, Option<Uuid>)>> {
+        let row = sqlx::query_as::<_, (Option<Uuid>, Option<Uuid>)>(
+            "SELECT organization_id, owner_user_id FROM saved_connections WHERE id = $1",
+        )
+        .bind(conn_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row)
+    }
 }

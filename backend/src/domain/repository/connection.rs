@@ -13,4 +13,8 @@ pub trait ConnectionRepository: Send + Sync {
     ) -> anyhow::Result<SavedConnectionRow>;
     async fn list(&self) -> anyhow::Result<Vec<SavedConnectionRow>>;
     async fn delete(&self, conn_id: &Uuid) -> anyhow::Result<bool>;
+    async fn get_ownership(
+        &self,
+        conn_id: &Uuid,
+    ) -> anyhow::Result<Option<(Option<Uuid>, Option<Uuid>)>>;
 }

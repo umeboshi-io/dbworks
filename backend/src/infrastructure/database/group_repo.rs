@@ -74,4 +74,13 @@ impl GroupRepository for PgGroupRepository {
         .await?;
         Ok(users)
     }
+
+    async fn get_org_id(&self, group_id: &Uuid) -> anyhow::Result<Option<Uuid>> {
+        let org_id =
+            sqlx::query_scalar::<_, Uuid>("SELECT organization_id FROM groups WHERE id = $1")
+                .bind(group_id)
+                .fetch_optional(&self.pool)
+                .await?;
+        Ok(org_id)
+    }
 }

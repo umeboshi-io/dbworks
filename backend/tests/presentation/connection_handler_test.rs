@@ -93,7 +93,7 @@ async fn delete_connection_as_member_returns_403() {
     let org_repo = PgOrganizationRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
 
-    let org = org_repo.create("Org").await.unwrap();
+    let _org = org_repo.create("Org").await.unwrap();
     let member = user_repo
         .create("Member", "member@test.com", "member")
         .await

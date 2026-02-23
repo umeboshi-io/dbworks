@@ -31,6 +31,8 @@ pub async fn grant_user_conn_permission(
     };
     match usecase::permission::grant_user_connection_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &req.user_id,
@@ -57,6 +59,8 @@ pub async fn revoke_user_conn_permission(
     };
     match usecase::permission::revoke_user_connection_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &user_id,
@@ -98,6 +102,8 @@ pub async fn grant_user_table_permission(
     };
     match usecase::permission::grant_user_table_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &user_id,
@@ -124,6 +130,8 @@ pub async fn revoke_user_table_permission(
     };
     match usecase::permission::revoke_user_table_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &user_id,
@@ -170,6 +178,8 @@ pub async fn grant_group_conn_permission(
     };
     match usecase::permission::grant_group_connection_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &req.group_id,
@@ -196,6 +206,8 @@ pub async fn revoke_group_conn_permission(
     };
     match usecase::permission::revoke_group_connection_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &group_id,
@@ -237,6 +249,8 @@ pub async fn grant_group_table_permission(
     };
     match usecase::permission::grant_group_table_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &group_id,
@@ -263,6 +277,8 @@ pub async fn revoke_group_table_permission(
     };
     match usecase::permission::revoke_group_table_permission(
         &*state.permission_repo,
+        &*state.org_member_repo,
+        &*state.conn_repo,
         &caller,
         &conn_id,
         &group_id,

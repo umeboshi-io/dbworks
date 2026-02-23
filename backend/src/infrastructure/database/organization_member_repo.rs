@@ -67,4 +67,15 @@ impl OrganizationMemberRepository for PgOrganizationMemberRepository {
         .await?;
         Ok(memberships)
     }
+
+    async fn get_role(&self, org_id: &Uuid, user_id: &Uuid) -> anyhow::Result<Option<String>> {
+        let role = sqlx::query_scalar::<_, String>(
+            "SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2",
+        )
+        .bind(org_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(role)
+    }
 }

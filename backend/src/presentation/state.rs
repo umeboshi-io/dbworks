@@ -26,6 +26,7 @@ pub struct AppStateInner {
     pub group_repo: Arc<dyn GroupRepository>,
     pub permission_repo: Arc<dyn PermissionRepository>,
     pub org_member_repo: Arc<dyn OrganizationMemberRepository>,
+    pub conn_repo: Arc<dyn ConnectionRepository>,
 }
 
 pub type AppState = Arc<AppStateInner>;
