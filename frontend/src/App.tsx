@@ -222,6 +222,7 @@ function App() {
         </div>
 
         <div className="conn-topbar-right">
+          <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
           <LanguageSelector />
           <button
             className="conn-manager-btn"
@@ -385,9 +386,6 @@ function App() {
               <button className="modal-close" onClick={() => setShowConnModal(false)}>×</button>
             </div>
 
-            <div className="modal-scope">
-              <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
-            </div>
 
             <div className="modal-body">
               {connections.length === 0 ? (
