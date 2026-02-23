@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { ColumnInfo, TableSchema, RowData } from '../types';
 import './DataTable.css';
 
@@ -13,6 +14,7 @@ interface DataTableProps {
 }
 
 function DataTable({ schema, rows, loading, sortBy, sortOrder, onSort, onEdit, onDelete }: DataTableProps) {
+  const { t } = useTranslation();
   const columns: ColumnInfo[] = schema.columns;
 
   const getSortIcon = (colName: string): string => {
@@ -63,7 +65,7 @@ function DataTable({ schema, rows, loading, sortBy, sortOrder, onSort, onEdit, o
                 <span className="th-type">{col.data_type}</span>
               </th>
             ))}
-            <th className="actions-th">Actions</th>
+            <th className="actions-th">{t('common.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -71,13 +73,13 @@ function DataTable({ schema, rows, loading, sortBy, sortOrder, onSort, onEdit, o
             <tr>
               <td colSpan={columns.length + 1} className="loading-cell">
                 <div className="loading-spinner" />
-                Loading...
+                {t('common.loading')}
               </td>
             </tr>
           ) : rows.length === 0 ? (
             <tr>
               <td colSpan={columns.length + 1} className="empty-cell">
-                No rows found
+                {t('common.noRowsFound')}
               </td>
             </tr>
           ) : (
@@ -92,14 +94,14 @@ function DataTable({ schema, rows, loading, sortBy, sortOrder, onSort, onEdit, o
                   <button
                     className="btn-icon btn-edit"
                     onClick={() => onEdit(row)}
-                    title="Edit"
+                    title={t('common.edit')}
                   >
                     ✎
                   </button>
                   <button
                     className="btn-icon btn-danger"
                     onClick={() => onDelete(row)}
-                    title="Delete"
+                    title={t('common.delete')}
                   >
                     ✕
                   </button>

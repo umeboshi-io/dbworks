@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { TableSchema, ColumnInfo, RowData } from '../types';
 import './DynamicForm.css';
 
@@ -66,6 +67,7 @@ function getInputType(dataType: string): string {
 }
 
 function DynamicForm({ schema, initialData, onSubmit, onCancel }: DynamicFormProps) {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState<RowData>(() => {
     if (initialData) {
       const converted: RowData = {};
@@ -189,10 +191,10 @@ function DynamicForm({ schema, initialData, onSubmit, onCancel }: DynamicFormPro
       </div>
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? <span className="loading-spinner" /> : initialData ? 'Update' : 'Create'}
+          {loading ? <span className="loading-spinner" /> : initialData ? t('common.update') : t('common.create')}
         </button>
       </div>
     </form>

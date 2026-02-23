@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { Organization } from '../types';
 import './OrgSelector.css';
@@ -11,6 +12,7 @@ interface OrgSelectorProps {
 }
 
 function OrgSelector({ currentScope, onScopeChange }: OrgSelectorProps) {
+  const { t } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -31,7 +33,7 @@ function OrgSelector({ currentScope, onScopeChange }: OrgSelectorProps) {
   }, []);
 
   const currentLabel = (() => {
-    if (currentScope === 'personal') return 'Personal';
+    if (currentScope === 'personal') return t('common.personal');
     const orgId = currentScope.replace('org:', '');
     const org = organizations.find((o) => o.id === orgId);
     return org?.name ?? orgId.slice(0, 8) + '...';
@@ -64,7 +66,7 @@ function OrgSelector({ currentScope, onScopeChange }: OrgSelectorProps) {
               <circle cx="7" cy="5" r="3" stroke="currentColor" strokeWidth="1.2" />
               <path d="M2 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" strokeWidth="1.2" fill="none" />
             </svg>
-            <span>Personal</span>
+            <span>{t('common.personal')}</span>
           </div>
           {organizations.length > 0 && <div className="org-selector-divider" />}
           {organizations.map((org) => (
