@@ -1,4 +1,5 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import type { Organization } from "../types";
 import "./OrganizationPage.css";
@@ -9,6 +10,7 @@ interface OrganizationPageProps {
 }
 
 function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
+  const { t } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,10 +54,10 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
       <div className="org-card">
         <div className="card-header">
           <div>
-            <h2>Organizations</h2>
-            <p>チームで DB を共有するための組織を管理します</p>
+            <h2>{t('org.title')}</h2>
+            <p>{t('org.subtitle')}</p>
           </div>
-          <button className="modal-close" onClick={onClose} title="Close">×</button>
+          <button className="modal-close" onClick={onClose} title={t('common.close')}>×</button>
         </div>
 
         <div className="org-tabs">
@@ -63,13 +65,13 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
             className={`org-tab ${activeTab === "create" ? "active" : ""}`}
             onClick={() => setActiveTab("create")}
           >
-            新規作成
+            {t('org.createTab')}
           </button>
           <button
             className={`org-tab ${activeTab === "list" ? "active" : ""}`}
             onClick={() => setActiveTab("list")}
           >
-            一覧 ({organizations.length})
+            {t('org.listTab', { count: organizations.length })}
           </button>
         </div>
 
@@ -78,7 +80,7 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
             {error && <div className="alert alert-error">{error}</div>}
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="org-name">Organization Name</label>
+                <label htmlFor="org-name">{t('org.nameLabel')}</label>
                 <input
                   id="org-name"
                   type="text"
@@ -86,7 +88,7 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     setName(e.target.value)
                   }
-                  placeholder="My Team"
+                  placeholder={t('org.namePlaceholder')}
                   required
                   autoFocus
                 />
@@ -97,7 +99,7 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
                   className="btn btn-ghost"
                   onClick={onClose}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
@@ -107,7 +109,7 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
                   {loading ? (
                     <span className="loading-spinner" />
                   ) : (
-                    "Create Organization"
+                    t('org.createOrg')
                   )}
                 </button>
               </div>
@@ -123,12 +125,12 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
               </div>
             ) : organizations.length === 0 ? (
               <div className="org-empty">
-                <p>まだ組織がありません</p>
+                <p>{t('org.noOrgs')}</p>
                 <button
                   className="btn btn-primary"
                   onClick={() => setActiveTab("create")}
                 >
-                  Create Organization
+                  {t('org.createOrg')}
                 </button>
               </div>
             ) : (
@@ -177,7 +179,7 @@ function OrganizationPage({ onClose, onJoined }: OrganizationPageProps) {
                 ))}
                 <div className="form-actions" style={{ marginTop: "1rem" }}>
                   <button className="btn btn-ghost" onClick={onClose}>
-                    Close
+                    {t('common.close')}
                   </button>
                 </div>
               </>

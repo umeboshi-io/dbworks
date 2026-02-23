@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import DataTable from '../components/DataTable';
 import DynamicForm from '../components/DynamicForm';
@@ -13,6 +14,7 @@ interface TablePageProps {
 }
 
 function TablePage({ connectionId, connectionName, connectionDetail, tableName }: TablePageProps) {
+  const { t } = useTranslation();
   const [schema, setSchema] = useState<TableSchema | null>(null);
   const [rowsData, setRowsData] = useState<RowsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,6 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
 
   useEffect(() => {
     // Reset all query state and schema when table/connection changes.
-    // Setting schema to null prevents loadRows from firing with stale sort/filter.
     setSchema(null);
     setRowsData(null);
     setPage(1);
@@ -153,7 +154,7 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
         <div className="table-title">
           <h2>{tableName}</h2>
           {rowsData && (
-            <span className="row-count">{rowsData.total_count} rows</span>
+            <span className="row-count">{t('table.rowCount', { count: rowsData.total_count })}</span>
           )}
         </div>
         <button
@@ -163,7 +164,7 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
             setShowForm(true);
           }}
         >
-          + New Row
+          {t('table.newRow')}
         </button>
       </div>
 
@@ -175,7 +176,7 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
             onChange={(e) => setFilterColumn(e.target.value)}
             className="filter-select"
           >
-            <option value="">Column...</option>
+            <option value="">{t('table.columnPlaceholder')}</option>
             {schema.columns.map((col) => (
               <option key={col.column_name} value={col.column_name}>
                 {col.column_name}
@@ -187,28 +188,28 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
             onChange={(e) => setFilterOp(e.target.value)}
             className="filter-select"
           >
-            <option value="like">contains</option>
-            <option value="eq">equals</option>
-            <option value="neq">not equals</option>
-            <option value="gt">greater than</option>
-            <option value="gte">greater or equal</option>
-            <option value="lt">less than</option>
-            <option value="lte">less or equal</option>
+            <option value="like">{t('table.contains')}</option>
+            <option value="eq">{t('table.equals')}</option>
+            <option value="neq">{t('table.notEquals')}</option>
+            <option value="gt">{t('table.greaterThan')}</option>
+            <option value="gte">{t('table.greaterOrEqual')}</option>
+            <option value="lt">{t('table.lessThan')}</option>
+            <option value="lte">{t('table.lessOrEqual')}</option>
           </select>
           <input
             type="text"
             value={filterValue}
             onChange={(e) => setFilterValue(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
-            placeholder="Value..."
+            placeholder={t('table.valuePlaceholder')}
             className="filter-input"
           />
           <button className="btn btn-ghost" onClick={handleFilter}>
-            Filter
+            {t('common.filter')}
           </button>
           {activeFilter && (
             <button className="btn btn-ghost btn-danger" onClick={clearFilter}>
-              Clear
+              {t('common.clear')}
             </button>
           )}
         </div>
@@ -241,17 +242,17 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
           >
-            ← Prev
+            {t('table.prev')}
           </button>
           <span className="page-info">
-            Page {page} of {totalPages}
+            {t('table.page', { current: page, total: totalPages })}
           </span>
           <button
             className="btn btn-ghost"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next →
+            {t('table.next')}
           </button>
         </div>
       )}
@@ -261,7 +262,7 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingRow ? 'Edit Row' : 'New Row'}</h3>
+              <h3>{editingRow ? t('table.editRow') : t('table.newRow')}</h3>
               <button className="btn-icon" onClick={() => setShowForm(false)}>
                 ×
               </button>
@@ -281,20 +282,20 @@ function TablePage({ connectionId, connectionName, connectionDetail, tableName }
         <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Delete Row</h3>
+              <h3>{t('table.deleteRow')}</h3>
             </div>
             <p style={{ padding: '0 1.5rem', color: 'var(--text-muted)' }}>
-              Are you sure you want to delete this row? This action cannot be undone.
+              {t('table.deleteConfirm')}
             </p>
             <div className="modal-actions">
               <button
                 className="btn btn-ghost"
                 onClick={() => setDeleteConfirm(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button className="btn btn-danger" onClick={handleDelete}>
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>

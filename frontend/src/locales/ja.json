@@ -1,0 +1,90 @@
+{
+  "common": {
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "create": "作成",
+    "update": "更新",
+    "delete": "削除",
+    "loading": "読み込み中...",
+    "edit": "編集",
+    "back": "← 戻る",
+    "connect": "接続",
+    "personal": "個人",
+    "logout": "ログアウト",
+    "manageOrgs": "組織の管理",
+    "manageConnections": "接続の管理",
+    "newConnection": "新しい接続",
+    "noRowsFound": "行が見つかりません",
+    "actions": "操作",
+    "filter": "フィルター",
+    "clear": "クリア"
+  },
+  "app": {
+    "title": "DBWorks",
+    "subtitle": "データベーススキーマ駆動CRUDマネージャー",
+    "connectToDb": "データベースに接続",
+    "selectTable": "← サイドバーからテーブルを選択してください",
+    "selectConnection": "接続を選択してください",
+    "loadingTables": "テーブルを読み込み中...",
+    "tables": "テーブル",
+    "connections": "接続",
+    "noConnections": "接続がまだありません",
+    "addConnection": "+ 接続を追加",
+    "newConnectionBtn": "+ 新しい接続",
+    "open": "使用中"
+  },
+  "login": {
+    "subtitle": "データベース管理をもっとスマートに",
+    "google": "Googleでログイン",
+    "github": "GitHubでログイン",
+    "terms": "ログインすることで、サービス利用規約に同意したことになります。"
+  },
+  "connection": {
+    "newTitle": "新しい{{dbLabel}}接続",
+    "enterDetails": "{{dbLabel}}の接続情報を入力してください",
+    "backToDbType": "DB種別選択に戻る",
+    "nameLabel": "接続名",
+    "namePlaceholder": "マイデータベース",
+    "hostLabel": "ホスト",
+    "portLabel": "ポート",
+    "databaseLabel": "データベース",
+    "databasePlaceholder": "my_database",
+    "userLabel": "ユーザー",
+    "passwordLabel": "パスワード"
+  },
+  "dbType": {
+    "chooseTitle": "データベースの種類を選択",
+    "chooseSubtitle": "接続するデータベースの種類を選んでください",
+    "postgresDesc": "先進的なオープンソースリレーショナルデータベース",
+    "mysqlDesc": "世界で最も人気のあるオープンソースデータベース"
+  },
+  "org": {
+    "title": "組織",
+    "subtitle": "チームでDBを共有するための組織を管理します",
+    "createTab": "新規作成",
+    "listTab": "一覧 ({{count}})",
+    "nameLabel": "組織名",
+    "namePlaceholder": "マイチーム",
+    "createOrg": "組織を作成",
+    "noOrgs": "まだ組織がありません"
+  },
+  "table": {
+    "newRow": "+ 新しい行",
+    "editRow": "行を編集",
+    "deleteRow": "行を削除",
+    "deleteConfirm": "この行を削除してもよろしいですか？この操作は元に戻せません。",
+    "page": "{{current}} / {{total}} ページ",
+    "prev": "← 前へ",
+    "next": "次へ →",
+    "columnPlaceholder": "カラム...",
+    "valuePlaceholder": "値...",
+    "contains": "含む",
+    "equals": "等しい",
+    "notEquals": "等しくない",
+    "greaterThan": "より大きい",
+    "greaterOrEqual": "以上",
+    "lessThan": "より小さい",
+    "lessOrEqual": "以下",
+    "rowCount": "{{count}} 行"
+  }
+}

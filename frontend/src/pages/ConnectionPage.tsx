@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api/client';
 import type { Connection } from '../types';
 import './ConnectionPage.css';
@@ -25,6 +26,7 @@ const DB_DEFAULTS: Record<string, { port: string; user: string; label: string }>
 };
 
 function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageProps) {
+  const { t } = useTranslation();
   const defaults = DB_DEFAULTS[dbType] ?? DB_DEFAULTS.postgres;
 
   const [form, setForm] = useState<ConnectionForm>({
@@ -65,30 +67,30 @@ function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageP
       <div className="connection-card">
         <div className="card-header">
           <div className="card-header-top">
-            <button className="btn-back" onClick={onBack} title="Back to DB type selection">
-              ← Back
+            <button className="btn-back" onClick={onBack} title={t('connection.backToDbType')}>
+              {t('common.back')}
             </button>
           </div>
-          <h2>New {defaults.label} Connection</h2>
-          <p>Enter your {defaults.label} connection details</p>
+          <h2>{t('connection.newTitle', { dbLabel: defaults.label })}</h2>
+          <p>{t('connection.enterDetails', { dbLabel: defaults.label })}</p>
         </div>
         {error && <div className="alert alert-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="conn-name">Connection Name</label>
+            <label htmlFor="conn-name">{t('connection.nameLabel')}</label>
             <input
               id="conn-name"
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="My Database"
+              placeholder={t('connection.namePlaceholder')}
               required
             />
           </div>
           <div className="form-row">
             <div className="form-group flex-grow">
-              <label htmlFor="conn-host">Host</label>
+              <label htmlFor="conn-host">{t('connection.hostLabel')}</label>
               <input
                 id="conn-host"
                 type="text"
@@ -100,7 +102,7 @@ function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageP
               />
             </div>
             <div className="form-group" style={{ width: '120px' }}>
-              <label htmlFor="conn-port">Port</label>
+              <label htmlFor="conn-port">{t('connection.portLabel')}</label>
               <input
                 id="conn-port"
                 type="number"
@@ -113,20 +115,20 @@ function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageP
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="conn-database">Database</label>
+            <label htmlFor="conn-database">{t('connection.databaseLabel')}</label>
             <input
               id="conn-database"
               type="text"
               name="database"
               value={form.database}
               onChange={handleChange}
-              placeholder="my_database"
+              placeholder={t('connection.databasePlaceholder')}
               required
             />
           </div>
           <div className="form-row">
             <div className="form-group flex-grow">
-              <label htmlFor="conn-user">User</label>
+              <label htmlFor="conn-user">{t('connection.userLabel')}</label>
               <input
                 id="conn-user"
                 type="text"
@@ -138,7 +140,7 @@ function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageP
               />
             </div>
             <div className="form-group flex-grow">
-              <label htmlFor="conn-password">Password</label>
+              <label htmlFor="conn-password">{t('connection.passwordLabel')}</label>
               <input
                 id="conn-password"
                 type="password"
@@ -151,13 +153,13 @@ function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageP
           </div>
           <div className="form-actions">
             <button type="button" className="btn btn-ghost" onClick={onCancel}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? (
                 <span className="loading-spinner" />
               ) : (
-                'Connect'
+                t('common.connect')
               )}
             </button>
           </div>

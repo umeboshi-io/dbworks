@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import './DbTypeSelectPage.css';
 
 interface DbTypeSelectPageProps {
@@ -6,12 +7,14 @@ interface DbTypeSelectPageProps {
 }
 
 function DbTypeSelectPage({ onSelect, onCancel }: DbTypeSelectPageProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="dbtype-select-page">
       <div className="dbtype-select-card">
         <div className="card-header">
-          <h2>Choose Database Type</h2>
-          <p>Select the type of database you want to connect to</p>
+          <h2>{t('dbType.chooseTitle')}</h2>
+          <p>{t('dbType.chooseSubtitle')}</p>
         </div>
         <div className="dbtype-options">
           <button
@@ -26,7 +29,7 @@ function DbTypeSelectPage({ onSelect, onCancel }: DbTypeSelectPageProps) {
               </svg>
             </div>
             <span className="dbtype-label">PostgreSQL</span>
-            <span className="dbtype-desc">Advanced open-source relational database</span>
+            <span className="dbtype-desc">{t('dbType.postgresDesc')}</span>
           </button>
           <button
             className="dbtype-option"
@@ -40,12 +43,12 @@ function DbTypeSelectPage({ onSelect, onCancel }: DbTypeSelectPageProps) {
               </svg>
             </div>
             <span className="dbtype-label">MySQL</span>
-            <span className="dbtype-desc">World's most popular open-source database</span>
+            <span className="dbtype-desc">{t('dbType.mysqlDesc')}</span>
           </button>
         </div>
         <div className="dbtype-actions">
           <button className="btn btn-ghost" onClick={onCancel}>
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </div>

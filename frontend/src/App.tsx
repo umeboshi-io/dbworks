@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import DbTypeSelectPage from './pages/DbTypeSelectPage';
 import ConnectionPage from './pages/ConnectionPage';
 import OrganizationPage from './pages/OrganizationPage';
@@ -13,6 +14,11 @@ import './App.css';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
+  const { t, i18n } = useTranslation();
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === 'ja' ? 'en' : 'ja');
+  };
   const [connections, setConnections] = useState<Connection[]>([]);
   const [openTabs, setOpenTabs] = useState<Connection[]>([]);
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
@@ -222,7 +228,7 @@ function App() {
           <button
             className="conn-manager-btn"
             onClick={() => setShowConnModal(true)}
-            title="Manage Connections"
+            title={t('common.manageConnections')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -230,10 +236,13 @@ function App() {
               <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
             </svg>
           </button>
-          <button className="btn-icon" onClick={() => setShowOrgPage(true)} title="Manage Organizations">
+          <button className="btn-icon" onClick={() => setShowOrgPage(true)} title={t('common.manageOrgs')}>
             ⚙
           </button>
-          <button className="btn-icon" onClick={logout} title="ログアウト">
+          <button className="btn-icon" onClick={toggleLanguage} title="Language">
+            🌐
+          </button>
+          <button className="btn-icon" onClick={logout} title={t('common.logout')}>
             ⏻
           </button>
         </div>
@@ -250,7 +259,7 @@ function App() {
                 <rect x="3" y="14" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.5" />
                 <rect x="14" y="14" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.3" />
               </svg>
-              {!sidebarCollapsed && <span>DBWorks</span>}
+              {!sidebarCollapsed && <span>{t('app.title')}</span>}
             </div>
             <button
               className="sidebar-toggle"
@@ -267,7 +276,7 @@ function App() {
                   <div className="section-header" onClick={() => setTablesOpen(!tablesOpen)} style={{ cursor: 'pointer' }}>
                     <h3>
                       <span className={`chevron ${tablesOpen ? 'open' : ''}`}>▶</span>
-                      Tables
+                      {t('app.tables')}
                     </h3>
                     <span className="badge">{tables.length}</span>
                   </div>
@@ -293,7 +302,7 @@ function App() {
               ) : (
                 <div className="sidebar-section">
                   <div className="empty-state">
-                    <p>{activeConnection ? 'Loading tables...' : 'Select a connection'}</p>
+                    <p>{activeConnection ? t('app.loadingTables') : t('app.selectConnection')}</p>
                   </div>
                 </div>
               )}
@@ -347,14 +356,14 @@ function App() {
                     <rect x="36" y="36" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.2" />
                   </svg>
                 </div>
-                <h1>DBWorks</h1>
-                <p>Database schema-driven CRUD manager</p>
+                <h1>{t('app.title')}</h1>
+                <p>{t('app.subtitle')}</p>
                 {!activeConnection ? (
                   <button
                     className="btn btn-primary btn-lg"
                     onClick={() => setShowDbTypeSelect(true)}
                   >
-                    Connect to Database
+                    {t('app.connectToDb')}
                   </button>
                 ) : (
                   <>
@@ -363,7 +372,7 @@ function App() {
                       <span className="welcome-conn-name">{activeConnection.name}</span>
                       <span className="welcome-conn-detail">{activeConnection.host}:{activeConnection.port}/{activeConnection.database}</span>
                     </div>
-                    <p className="hint">← Select a table from the sidebar</p>
+                    <p className="hint">{t('app.selectTable')}</p>
                   </>
                 )}
               </div>
@@ -377,7 +386,7 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowConnModal(false)}>
           <div className="modal-content conn-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Connections</h2>
+              <h2>{t('app.connections')}</h2>
               <button className="modal-close" onClick={() => setShowConnModal(false)}>×</button>
             </div>
 
@@ -393,12 +402,12 @@ function App() {
                     <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
                     <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
                   </svg>
-                  <p>No connections yet</p>
+                  <p>{t('app.noConnections')}</p>
                   <button
                     className="btn btn-primary"
                     onClick={() => { setShowConnModal(false); setShowDbTypeSelect(true); }}
                   >
-                    + Add Connection
+                    {t('app.addConnection')}
                   </button>
                 </div>
               ) : (
@@ -420,11 +429,11 @@ function App() {
                           </div>
                         </div>
                         <div className="conn-modal-actions">
-                          {isOpen && <span className="conn-modal-badge">Open</span>}
+                          {isOpen && <span className="conn-modal-badge">{t('app.open')}</span>}
                           <button
                             className="btn-icon btn-danger"
                             onClick={() => handleDeleteConnection(conn.id)}
-                            title="Delete connection"
+                            title={t('common.delete')}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="3 6 5 6 21 6" />
@@ -444,7 +453,7 @@ function App() {
                 className="btn btn-primary"
                 onClick={() => { setShowConnModal(false); setShowDbTypeSelect(true); }}
               >
-                + New Connection
+                {t('app.newConnectionBtn')}
               </button>
             </div>
           </div>

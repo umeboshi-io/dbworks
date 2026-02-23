@@ -1,0 +1,90 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "create": "Create",
+    "update": "Update",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "edit": "Edit",
+    "back": "← Back",
+    "connect": "Connect",
+    "personal": "Personal",
+    "logout": "Logout",
+    "manageOrgs": "Manage Organizations",
+    "manageConnections": "Manage Connections",
+    "newConnection": "New Connection",
+    "noRowsFound": "No rows found",
+    "actions": "Actions",
+    "filter": "Filter",
+    "clear": "Clear"
+  },
+  "app": {
+    "title": "DBWorks",
+    "subtitle": "Database schema-driven CRUD manager",
+    "connectToDb": "Connect to Database",
+    "selectTable": "← Select a table from the sidebar",
+    "selectConnection": "Select a connection",
+    "loadingTables": "Loading tables...",
+    "tables": "Tables",
+    "connections": "Connections",
+    "noConnections": "No connections yet",
+    "addConnection": "+ Add Connection",
+    "newConnectionBtn": "+ New Connection",
+    "open": "Open"
+  },
+  "login": {
+    "subtitle": "Make database management smarter",
+    "google": "Log in with Google",
+    "github": "Log in with GitHub",
+    "terms": "By logging in, you agree to the Terms of Service."
+  },
+  "connection": {
+    "newTitle": "New {{dbLabel}} Connection",
+    "enterDetails": "Enter your {{dbLabel}} connection details",
+    "backToDbType": "Back to DB type selection",
+    "nameLabel": "Connection Name",
+    "namePlaceholder": "My Database",
+    "hostLabel": "Host",
+    "portLabel": "Port",
+    "databaseLabel": "Database",
+    "databasePlaceholder": "my_database",
+    "userLabel": "User",
+    "passwordLabel": "Password"
+  },
+  "dbType": {
+    "chooseTitle": "Choose Database Type",
+    "chooseSubtitle": "Select the type of database you want to connect to",
+    "postgresDesc": "Advanced open-source relational database",
+    "mysqlDesc": "World's most popular open-source database"
+  },
+  "org": {
+    "title": "Organizations",
+    "subtitle": "Manage organizations to share databases with your team",
+    "createTab": "Create New",
+    "listTab": "List ({{count}})",
+    "nameLabel": "Organization Name",
+    "namePlaceholder": "My Team",
+    "createOrg": "Create Organization",
+    "noOrgs": "No organizations yet"
+  },
+  "table": {
+    "newRow": "+ New Row",
+    "editRow": "Edit Row",
+    "deleteRow": "Delete Row",
+    "deleteConfirm": "Are you sure you want to delete this row? This action cannot be undone.",
+    "page": "Page {{current}} of {{total}}",
+    "prev": "← Prev",
+    "next": "Next →",
+    "columnPlaceholder": "Column...",
+    "valuePlaceholder": "Value...",
+    "contains": "contains",
+    "equals": "equals",
+    "notEquals": "not equals",
+    "greaterThan": "greater than",
+    "greaterOrEqual": "greater or equal",
+    "lessThan": "less than",
+    "lessOrEqual": "less or equal",
+    "rowCount": "{{count}} rows"
+  }
+}
