@@ -22,7 +22,12 @@ pub fn build_test_app(pool: PgPool) -> Router {
     let permission_repo = Arc::new(PgPermissionRepository::new(pool.clone()));
     let org_member_repo = Arc::new(PgOrganizationMemberRepository::new(pool.clone()));
     let encryptor = {
-        unsafe { std::env::set_var("ENCRYPTION_KEY", "dGVzdGtleXRlc3RrZXl0ZXN0a2V5dGVzdGtleTEy") };
+        unsafe {
+            std::env::set_var(
+                "ENCRYPTION_KEY",
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &[42u8; 32]),
+            );
+        }
         Encryptor::from_env().unwrap()
     };
     let conn_repo = Arc::new(PgConnectionRepository::new(pool.clone(), encryptor));
