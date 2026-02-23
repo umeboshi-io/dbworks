@@ -43,6 +43,7 @@ fn make_connection_info(org_id: Option<Uuid>, owner_id: Option<Uuid>) -> Connect
     ConnectionInfo {
         id: Uuid::new_v4(),
         name: "test-conn".to_string(),
+        db_type: "postgres".to_string(),
         host: "localhost".to_string(),
         port: 5432,
         database: "testdb".to_string(),

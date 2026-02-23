@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import DbTypeSelectPage from './pages/DbTypeSelectPage';
 import ConnectionPage from './pages/ConnectionPage';
 import OrganizationPage from './pages/OrganizationPage';
 import TablePage from './pages/TablePage';
@@ -13,20 +14,81 @@ import './App.css';
 function App() {
   const { user, isLoading, logout } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [openTabs, setOpenTabs] = useState<Connection[]>([]);
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
   const [tables, setTables] = useState<TableInfo[]>([]);
-  const [activeTable, setActiveTable] = useState<string | null>(null);
+  const [activeTable, setActiveTable] = useState<string | null>(
+    () => sessionStorage.getItem('dbw:activeTable')
+  );
   const [showConnectionForm, setShowConnectionForm] = useState(false);
+  const [showDbTypeSelect, setShowDbTypeSelect] = useState(false);
+  const [selectedDbType, setSelectedDbType] = useState<string | null>(null);
   const [showOrgPage, setShowOrgPage] = useState(false);
+  const [showConnModal, setShowConnModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [connectionsOpen, setConnectionsOpen] = useState(true);
   const [tablesOpen, setTablesOpen] = useState(true);
-  const [scope, setScope] = useState<Scope>('personal');
+  const [scope, setScope] = useState<Scope>(
+    () => (sessionStorage.getItem('dbw:scope') as Scope) || 'personal'
+  );
+
+  // Skip sessionStorage saves until initial restore is complete
+  const restoredRef = useRef(false);
+
+  // Persist selection state to sessionStorage (only after initial restore)
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    if (activeTable) {
+      sessionStorage.setItem('dbw:activeTable', activeTable);
+    } else {
+      sessionStorage.removeItem('dbw:activeTable');
+    }
+  }, [activeTable]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    if (activeConnection) {
+      sessionStorage.setItem('dbw:activeConnId', activeConnection.id);
+    } else {
+      sessionStorage.removeItem('dbw:activeConnId');
+    }
+  }, [activeConnection]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    sessionStorage.setItem('dbw:scope', scope);
+  }, [scope]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    const tabIds = openTabs.map((t) => t.id);
+    sessionStorage.setItem('dbw:openTabIds', JSON.stringify(tabIds));
+  }, [openTabs]);
 
   const loadConnections = useCallback(async (s: Scope) => {
     try {
       const data = await api.listConnections(s);
       setConnections(data);
+
+      // Restore open tabs and active connection from session
+      if (!restoredRef.current) {
+        restoredRef.current = true;
+        const savedTabIds = sessionStorage.getItem('dbw:openTabIds');
+        const savedActiveId = sessionStorage.getItem('dbw:activeConnId');
+
+        if (savedTabIds) {
+          const ids: string[] = JSON.parse(savedTabIds);
+          const restored = ids
+            .map((id) => data.find((c: Connection) => c.id === id))
+            .filter(Boolean) as Connection[];
+          if (restored.length > 0) {
+            setOpenTabs(restored);
+            if (savedActiveId) {
+              const active = restored.find((c) => c.id === savedActiveId);
+              if (active) setActiveConnection(active);
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed to load connections:', err);
     }
@@ -56,8 +118,42 @@ function App() {
 
   const handleConnectionCreated = (conn: Connection) => {
     setConnections((prev) => [...prev, conn]);
+    // Add to tabs and activate
+    setOpenTabs((prev) => prev.some((t) => t.id === conn.id) ? prev : [...prev, conn]);
     setActiveConnection(conn);
+    setActiveTable(null);
     setShowConnectionForm(false);
+  };
+
+  const handleSelectConnection = (conn: Connection) => {
+    // Add to open tabs if not already there, and make active
+    setOpenTabs((prev) => prev.some((t) => t.id === conn.id) ? prev : [...prev, conn]);
+    setActiveConnection(conn);
+    setActiveTable(null);
+    setShowConnModal(false);
+  };
+
+  const handleCloseTab = (connId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const remaining = openTabs.filter((t) => t.id !== connId);
+    setOpenTabs(remaining);
+    if (activeConnection?.id === connId) {
+      setActiveConnection(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+    }
+  };
+
+  const handleDeleteConnection = async (connId: string) => {
+    try {
+      await api.deleteConnection(connId);
+      setConnections((prev) => prev.filter((c) => c.id !== connId));
+      setOpenTabs((prev) => prev.filter((t) => t.id !== connId));
+      if (activeConnection?.id === connId) {
+        const remaining = openTabs.filter((t) => t.id !== connId);
+        setActiveConnection(remaining.length > 0 ? remaining[remaining.length - 1] : null);
+      }
+    } catch (err) {
+      console.error('Failed to delete connection:', err);
+    }
   };
 
   const handleOrgJoined = (_org: Organization) => {
@@ -68,19 +164,21 @@ function App() {
     setScope(newScope);
     setActiveConnection(null);
     setActiveTable(null);
+    setOpenTabs([]);
   };
 
-  const handleDeleteConnection = async (connId: string) => {
-    try {
-      await api.deleteConnection(connId);
-      setConnections((prev) => prev.filter((c) => c.id !== connId));
-      if (activeConnection?.id === connId) {
-        setActiveConnection(null);
-      }
-    } catch (err) {
-      console.error('Failed to delete connection:', err);
-    }
-  };
+  const dbIcon = (dbType?: string, size = 16) =>
+    dbType === 'mysql' ? (
+      <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+        <ellipse cx="32" cy="32" rx="28" ry="28" fill="#00758F" />
+        <text x="32" y="42" textAnchor="middle" fontFamily="serif" fontWeight="bold" fontSize="24" fill="#F29111">My</text>
+      </svg>
+    ) : (
+      <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+        <ellipse cx="32" cy="32" rx="28" ry="28" fill="#336791" />
+        <text x="32" y="44" textAnchor="middle" fontFamily="serif" fontWeight="bold" fontSize="32" fill="#fff">P</text>
+      </svg>
+    );
 
   if (isLoading) {
     return (
@@ -96,209 +194,262 @@ function App() {
 
   return (
     <div className="app">
-      {/* Sidebar */}
-      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="7" height="7" rx="2" fill="var(--accent)" />
-              <rect x="14" y="3" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.7" />
-              <rect x="3" y="14" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.5" />
-              <rect x="14" y="14" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.3" />
-            </svg>
-            {!sidebarCollapsed && <span>DBWorks</span>}
+      {/* Connection Tabs Bar */}
+      <div className="conn-topbar">
+        <div className="conn-topbar-left">
+          {/* Open connection tabs */}
+          <div className="conn-tabs">
+            {openTabs.map((conn) => (
+              <button
+                key={conn.id}
+                className={`conn-tab ${activeConnection?.id === conn.id ? 'active' : ''}`}
+                onClick={() => { setActiveConnection(conn); setActiveTable(null); }}
+              >
+                <span className="conn-tab-icon">{dbIcon(conn.db_type, 14)}</span>
+                <span className="conn-tab-name">{conn.name}</span>
+                <span
+                  className="conn-tab-close"
+                  onClick={(e) => handleCloseTab(conn.id, e)}
+                >
+                  ×
+                </span>
+              </button>
+            ))}
           </div>
-          <button
-            className="sidebar-toggle"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            {sidebarCollapsed ? '→' : '←'}
-          </button>
         </div>
 
-        {!sidebarCollapsed && (
-          <>
-            {/* User info */}
-            <div className="sidebar-user">
-              {user.avatar_url && (
-                <img src={user.avatar_url} alt="" className="user-avatar" />
-              )}
-              {!user.avatar_url && (
-                <div className="user-avatar-placeholder">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="user-info">
-                <span className="user-name">{user.name}</span>
-                <span className="user-email">{user.email}</span>
-              </div>
-              <button className="btn-icon" onClick={() => { setShowOrgPage(true); setShowConnectionForm(false); }} title="Manage Organizations">
-                ⚙
-              </button>
-              <button className="btn-icon" onClick={logout} title="ログアウト">
-                ⏻
-              </button>
-            </div>
-            {/* Org selector */}
-            <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
-            {/* Connections */}
-            <div className="sidebar-section">
-              <div className="section-header" onClick={() => setConnectionsOpen(!connectionsOpen)} style={{ cursor: 'pointer' }}>
-                <h3>
-                  <span className={`chevron ${connectionsOpen ? 'open' : ''}`}>▶</span>
-                  Connections
-                </h3>
-                <button
-                  className="btn-icon"
-                  onClick={(e) => { e.stopPropagation(); setShowConnectionForm(true); }}
-                  title="Add Connection"
-                >
-                  +
-                </button>
-              </div>
-              {connectionsOpen && (
-              <div className="connection-list">
-                {connections.map((conn) => (
-                  <div
-                    key={conn.id}
-                    className={`connection-item ${activeConnection?.id === conn.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveTable(null);
-                      setActiveConnection(conn);
-                    }}
-                  >
-                    <div className="connection-icon">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <ellipse cx="8" cy="4" rx="6" ry="2.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                        <path d="M2 4v4c0 1.38 2.69 2.5 6 2.5S14 9.38 14 8V4" stroke="currentColor" strokeWidth="1.5" />
-                        <path d="M2 8v4c0 1.38 2.69 2.5 6 2.5S14 13.38 14 12V8" stroke="currentColor" strokeWidth="1.5" />
-                      </svg>
-                    </div>
-                    <div className="connection-info">
-                      <span className="connection-name">{conn.name}</span>
-                      <span className="connection-detail">{conn.host}:{conn.port}/{conn.database}</span>
-                    </div>
-                    <button
-                      className="btn-icon btn-danger"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteConnection(conn.id);
-                      }}
-                      title="Delete"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {connections.length === 0 && (
-                  <div className="empty-state">
-                    <p>No connections yet</p>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => setShowConnectionForm(true)}
-                    >
-                      Add Connection
-                    </button>
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
+        <div className="conn-topbar-right">
+          <button
+            className="conn-manager-btn"
+            onClick={() => setShowConnModal(true)}
+            title="Manage Connections"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <ellipse cx="12" cy="5" rx="9" ry="3" />
+              <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+              <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
+            </svg>
+          </button>
+          <button className="btn-icon" onClick={() => setShowOrgPage(true)} title="Manage Organizations">
+            ⚙
+          </button>
+          <button className="btn-icon" onClick={logout} title="ログアウト">
+            ⏻
+          </button>
+        </div>
+      </div>
 
-            {/* Tables */}
-            {activeConnection && tables.length > 0 && (
-              <div className="sidebar-section">
-                <div className="section-header" onClick={() => setTablesOpen(!tablesOpen)} style={{ cursor: 'pointer' }}>
-                  <h3>
-                    <span className={`chevron ${tablesOpen ? 'open' : ''}`}>▶</span>
-                    Tables
-                  </h3>
-                  <span className="badge">{tables.length}</span>
-                </div>
-                {tablesOpen && (
-                <div className="table-list">
-                  {tables.map((t) => (
-                    <div
-                      key={t.table_name}
-                      className={`table-item ${activeTable === t.table_name ? 'active' : ''}`}
-                      onClick={() => setActiveTable(t.table_name)}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                        <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2" />
-                        <line x1="1" y1="5" x2="13" y2="5" stroke="currentColor" strokeWidth="1.2" />
-                        <line x1="5" y1="5" x2="5" y2="13" stroke="currentColor" strokeWidth="1.2" />
-                      </svg>
-                      <span title={t.table_name}>{t.table_name}</span>
-                    </div>
-                  ))}
-                </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </aside>
+      <div className="app-body">
+        {/* Sidebar — Tables only */}
+        <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+          <div className="sidebar-header">
+            <div className="logo">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="7" height="7" rx="2" fill="var(--accent)" />
+                <rect x="14" y="3" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.7" />
+                <rect x="3" y="14" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.5" />
+                <rect x="14" y="14" width="7" height="7" rx="2" fill="var(--accent)" opacity="0.3" />
+              </svg>
+              {!sidebarCollapsed && <span>DBWorks</span>}
+            </div>
+            <button
+              className="sidebar-toggle"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? '→' : '←'}
+            </button>
+          </div>
 
-      {/* Main Content */}
-      <main className="main-content">
-        {showOrgPage && (
-          <OrganizationPage
-            onClose={() => setShowOrgPage(false)}
-            onJoined={handleOrgJoined}
-          />
-        )}
-        {!showOrgPage && showConnectionForm && (
-          <ConnectionPage
-            onCreated={handleConnectionCreated}
-            onCancel={() => setShowConnectionForm(false)}
-          />
-        )}
-        {!showOrgPage && !showConnectionForm && activeConnection && activeTable && (
-          <TablePage
-            connectionId={activeConnection.id}
-            connectionName={activeConnection.name}
-            connectionDetail={`${activeConnection.host}:${activeConnection.port}/${activeConnection.database}`}
-            tableName={activeTable}
-          />
-        )}
-        {!showOrgPage && !showConnectionForm && !activeTable && (
-          <div className="welcome">
-            <div className="welcome-content">
-              <div className="welcome-icon">
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-                  <rect x="8" y="8" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.8" />
-                  <rect x="36" y="8" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.6" />
-                  <rect x="8" y="36" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.4" />
-                  <rect x="36" y="36" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.2" />
-                </svg>
-              </div>
-              <h1>DBWorks</h1>
-              <p>Database schema-driven CRUD manager</p>
-              {!activeConnection ? (
-                <button
-                  className="btn btn-primary btn-lg"
-                  onClick={() => setShowConnectionForm(true)}
-                >
-                  Connect to Database
-                </button>
+          {!sidebarCollapsed && (
+            <>
+              {activeConnection && tables.length > 0 ? (
+                <div className="sidebar-section">
+                  <div className="section-header" onClick={() => setTablesOpen(!tablesOpen)} style={{ cursor: 'pointer' }}>
+                    <h3>
+                      <span className={`chevron ${tablesOpen ? 'open' : ''}`}>▶</span>
+                      Tables
+                    </h3>
+                    <span className="badge">{tables.length}</span>
+                  </div>
+                  {tablesOpen && (
+                  <div className="table-list">
+                    {tables.map((t) => (
+                      <div
+                        key={t.table_name}
+                        className={`table-item ${activeTable === t.table_name ? 'active' : ''}`}
+                        onClick={() => setActiveTable(t.table_name)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2" />
+                          <line x1="1" y1="5" x2="13" y2="5" stroke="currentColor" strokeWidth="1.2" />
+                          <line x1="5" y1="5" x2="5" y2="13" stroke="currentColor" strokeWidth="1.2" />
+                        </svg>
+                        <span title={t.table_name}>{t.table_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  )}
+                </div>
               ) : (
-                <>
-                  <div className="welcome-connection">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <ellipse cx="8" cy="4" rx="6" ry="2.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                      <path d="M2 4v4c0 1.38 2.69 2.5 6 2.5S14 9.38 14 8V4" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M2 8v4c0 1.38 2.69 2.5 6 2.5S14 13.38 14 12V8" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                    <span className="welcome-conn-name">{activeConnection.name}</span>
-                    <span className="welcome-conn-detail">{activeConnection.host}:{activeConnection.port}/{activeConnection.database}</span>
+                <div className="sidebar-section">
+                  <div className="empty-state">
+                    <p>{activeConnection ? 'Loading tables...' : 'Select a connection'}</p>
                   </div>
-                  <p className="hint">← Select a table from the sidebar</p>
-                </>
+                </div>
               )}
+            </>
+          )}
+        </aside>
+
+        {/* Main Content */}
+        <main className="main-content">
+          {showOrgPage && (
+            <OrganizationPage
+              onClose={() => setShowOrgPage(false)}
+              onJoined={handleOrgJoined}
+            />
+          )}
+          {!showOrgPage && showDbTypeSelect && !showConnectionForm && (
+            <DbTypeSelectPage
+              onSelect={(dbType) => {
+                setSelectedDbType(dbType);
+                setShowDbTypeSelect(false);
+                setShowConnectionForm(true);
+              }}
+              onCancel={() => setShowDbTypeSelect(false)}
+            />
+          )}
+          {!showOrgPage && showConnectionForm && selectedDbType && (
+            <ConnectionPage
+              dbType={selectedDbType}
+              onCreated={handleConnectionCreated}
+              onCancel={() => { setShowConnectionForm(false); setSelectedDbType(null); }}
+              onBack={() => { setShowConnectionForm(false); setShowDbTypeSelect(true); }}
+            />
+          )}
+          {!showOrgPage && !showConnectionForm && !showDbTypeSelect && activeConnection && activeTable && (
+            <TablePage
+              key={`${activeConnection.id}:${activeTable}`}
+              connectionId={activeConnection.id}
+              connectionName={activeConnection.name}
+              connectionDetail={`${activeConnection.host}:${activeConnection.port}/${activeConnection.database}`}
+              tableName={activeTable}
+            />
+          )}
+          {!showOrgPage && !showConnectionForm && !showDbTypeSelect && !activeTable && (
+            <div className="welcome">
+              <div className="welcome-content">
+                <div className="welcome-icon">
+                  <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                    <rect x="8" y="8" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.8" />
+                    <rect x="36" y="8" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.6" />
+                    <rect x="8" y="36" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.4" />
+                    <rect x="36" y="36" width="20" height="20" rx="4" fill="var(--accent)" opacity="0.2" />
+                  </svg>
+                </div>
+                <h1>DBWorks</h1>
+                <p>Database schema-driven CRUD manager</p>
+                {!activeConnection ? (
+                  <button
+                    className="btn btn-primary btn-lg"
+                    onClick={() => setShowDbTypeSelect(true)}
+                  >
+                    Connect to Database
+                  </button>
+                ) : (
+                  <>
+                    <div className="welcome-connection">
+                      {dbIcon(activeConnection.db_type)}
+                      <span className="welcome-conn-name">{activeConnection.name}</span>
+                      <span className="welcome-conn-detail">{activeConnection.host}:{activeConnection.port}/{activeConnection.database}</span>
+                    </div>
+                    <p className="hint">← Select a table from the sidebar</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Connections Management Modal */}
+      {showConnModal && (
+        <div className="modal-overlay" onClick={() => setShowConnModal(false)}>
+          <div className="modal-content conn-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Connections</h2>
+              <button className="modal-close" onClick={() => setShowConnModal(false)}>×</button>
+            </div>
+
+            <div className="modal-scope">
+              <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
+            </div>
+
+            <div className="modal-body">
+              {connections.length === 0 ? (
+                <div className="conn-modal-empty">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5">
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5" />
+                    <path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6" />
+                  </svg>
+                  <p>No connections yet</p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => { setShowConnModal(false); setShowDbTypeSelect(true); }}
+                  >
+                    + Add Connection
+                  </button>
+                </div>
+              ) : (
+                <div className="conn-modal-list">
+                  {connections.map((conn) => {
+                    const isOpen = openTabs.some((t) => t.id === conn.id);
+                    return (
+                      <div
+                        key={conn.id}
+                        className={`conn-modal-item ${isOpen ? 'open' : ''}`}
+                      >
+                        <div className="conn-modal-item-left" onClick={() => handleSelectConnection(conn)}>
+                          <div className="conn-modal-icon">{dbIcon(conn.db_type, 20)}</div>
+                          <div className="conn-modal-info">
+                            <span className="conn-modal-name">{conn.name}</span>
+                            <span className="conn-modal-detail">
+                              {conn.host}:{conn.port}/{conn.database}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="conn-modal-actions">
+                          {isOpen && <span className="conn-modal-badge">Open</span>}
+                          <button
+                            className="btn-icon btn-danger"
+                            onClick={() => handleDeleteConnection(conn.id)}
+                            title="Delete connection"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn btn-primary"
+                onClick={() => { setShowConnModal(false); setShowDbTypeSelect(true); }}
+              >
+                + New Connection
+              </button>
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
