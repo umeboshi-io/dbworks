@@ -34,6 +34,12 @@ function App() {
       return { ...prev, [scope]: next };
     });
   };
+  const [scopedActiveConnId, setScopedActiveConnId] = useState<Record<string, string | null>>(
+    () => {
+      const saved = sessionStorage.getItem('dbw:scopedActiveConnId');
+      return saved ? JSON.parse(saved) : {};
+    }
+  );
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(
@@ -64,10 +70,17 @@ function App() {
     if (!restoredRef.current) return;
     if (activeConnection) {
       sessionStorage.setItem('dbw:activeConnId', activeConnection.id);
+      setScopedActiveConnId((prev) => ({ ...prev, [scope]: activeConnection.id }));
     } else {
       sessionStorage.removeItem('dbw:activeConnId');
+      setScopedActiveConnId((prev) => ({ ...prev, [scope]: null }));
     }
-  }, [activeConnection]);
+  }, [activeConnection, scope]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    sessionStorage.setItem('dbw:scopedActiveConnId', JSON.stringify(scopedActiveConnId));
+  }, [scopedActiveConnId]);
 
   useEffect(() => {
     if (!restoredRef.current) return;
@@ -178,9 +191,18 @@ function App() {
 
   const handleScopeChange = (newScope: Scope) => {
     setScope(newScope);
-    setActiveConnection(null);
     setActiveTable(null);
     setTables([]);
+
+    // Restore last active connection for the new scope
+    const lastActiveId = scopedActiveConnId[newScope];
+    const newScopeTabs = scopedTabs[newScope] || [];
+    if (lastActiveId) {
+      const restored = newScopeTabs.find((c) => c.id === lastActiveId) || null;
+      setActiveConnection(restored);
+    } else {
+      setActiveConnection(null);
+    }
   };
 
   const dbIcon = (dbType?: string, size = 16) =>
