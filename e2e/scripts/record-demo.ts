@@ -73,13 +73,16 @@ async function main() {
 
   // Step 7: Browse tables (skip app_users to avoid showing personal data)
   await page.getByText('organizations').click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('text=/\\d+ rows/i', { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(4000);
 
   await page.getByText('organization_members').click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('text=/\\d+ rows/i', { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(4000);
 
   await page.getByText('groups').click();
-  await page.waitForTimeout(3000);
+  await page.waitForSelector('text=/\\d+ rows/i', { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(4000);
 
   // Close to finalize video
   await context.close();
