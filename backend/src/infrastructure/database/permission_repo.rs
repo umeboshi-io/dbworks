@@ -268,6 +268,22 @@ impl PermissionRepository for PgPermissionRepository {
             return Ok((PermissionLevel::Admin, true));
         }
 
+        // 1.6. Org member → read access to org connections
+        let is_org_member = sqlx::query_scalar::<_, bool>(
+            r#"SELECT EXISTS(
+                SELECT 1 FROM saved_connections sc
+                INNER JOIN organization_members om ON om.organization_id = sc.organization_id
+                WHERE sc.id = $1 AND om.user_id = $2 AND sc.organization_id IS NOT NULL
+            )"#,
+        )
+        .bind(conn_id)
+        .bind(user.id)
+        .fetch_one(&self.pool)
+        .await?;
+        if is_org_member {
+            return Ok((PermissionLevel::Read, true));
+        }
+
         // 2. Check user-level permission
         let user_perm = sqlx::query_as::<_, UserConnectionPermission>(
             "SELECT * FROM user_connection_permissions WHERE user_id = $1 AND connection_id = $2",

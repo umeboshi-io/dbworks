@@ -16,7 +16,7 @@ async fn seed(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
     let user_repo = PgUserRepository::new(pool.clone());
     let org = org_repo.create("Org").await.unwrap();
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
     (org.id, admin.id)
@@ -49,9 +49,9 @@ async fn list_tables_returns_403_for_no_permission() {
     let org_repo = PgOrganizationRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
 
-    let org = org_repo.create("Org").await.unwrap();
+    let _org = org_repo.create("Org").await.unwrap();
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
 

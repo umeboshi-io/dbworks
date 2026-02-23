@@ -6,6 +6,7 @@ import './ConnectionPage.css';
 
 interface ConnectionPageProps {
   dbType: string;
+  scope: string;
   onCreated: (conn: Connection) => void;
   onCancel: () => void;
   onBack: () => void;
@@ -25,7 +26,7 @@ const DB_DEFAULTS: Record<string, { port: string; user: string; label: string }>
   mysql: { port: '3306', user: 'root', label: 'MySQL' },
 };
 
-function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageProps) {
+function ConnectionPage({ dbType, scope, onCreated, onCancel, onBack }: ConnectionPageProps) {
   const { t } = useTranslation();
   const defaults = DB_DEFAULTS[dbType] ?? DB_DEFAULTS.postgres;
 
@@ -53,6 +54,7 @@ function ConnectionPage({ dbType, onCreated, onCancel, onBack }: ConnectionPageP
         ...form,
         db_type: dbType,
         port: parseInt(form.port, 10),
+        scope,
       });
       onCreated(conn);
     } catch (err) {

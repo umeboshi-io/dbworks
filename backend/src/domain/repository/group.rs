@@ -16,4 +16,5 @@ pub trait GroupRepository: Send + Sync {
     async fn add_member(&self, group_id: &Uuid, user_id: &Uuid) -> anyhow::Result<()>;
     async fn remove_member(&self, group_id: &Uuid, user_id: &Uuid) -> anyhow::Result<bool>;
     async fn list_members(&self, group_id: &Uuid) -> anyhow::Result<Vec<AppUser>>;
+    async fn get_org_id(&self, group_id: &Uuid) -> anyhow::Result<Option<Uuid>>;
 }

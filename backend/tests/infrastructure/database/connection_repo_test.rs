@@ -21,7 +21,7 @@ async fn setup_org_and_user(
 
     let org = org_repo.create("Test Org").await.unwrap();
     let user = user_repo
-        .create(&org.id, "Alice", "alice@test.com", "member")
+        .create("Alice", "alice@test.com", "member")
         .await
         .unwrap();
 

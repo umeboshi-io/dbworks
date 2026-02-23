@@ -1,7 +1,10 @@
 use crate::common;
-use crate::presentation::helpers::build_test_app;
+use crate::presentation::helpers::{build_test_app, seed_org_and_owner};
 
-use dbworks_backend::domain::repository::{OrganizationRepository, UserRepository};
+use dbworks_backend::domain::repository::{
+    OrganizationMemberRepository, OrganizationRepository, UserRepository,
+};
+use dbworks_backend::infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
 use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
 use dbworks_backend::infrastructure::database::user_repo::PgUserRepository;
 use http::Request;
@@ -9,24 +12,11 @@ use http_body_util::BodyExt;
 use serial_test::serial;
 use tower::ServiceExt;
 
-/// Seed an organization + super_admin user and return (org_id, user_id).
-async fn seed_org_and_admin(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
-    let org_repo = PgOrganizationRepository::new(pool.clone());
-    let user_repo = PgUserRepository::new(pool.clone());
-
-    let org = org_repo.create("Test Org").await.unwrap();
-    let user = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
-        .await
-        .unwrap();
-    (org.id, user.id)
-}
-
 #[tokio::test]
 #[serial]
 async fn create_user_returns_201() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed_org_and_admin(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     let app = build_test_app(pool);
 
@@ -84,10 +74,16 @@ async fn create_user_as_member_returns_403() {
     let pool = common::setup_test_db().await;
     let org_repo = PgOrganizationRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
+    let org_member_repo = PgOrganizationMemberRepository::new(pool.clone());
 
     let org = org_repo.create("Org").await.unwrap();
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
+        .await
+        .unwrap();
+    // Add as org member (not owner)
+    org_member_repo
+        .add_member(&org.id, &member.id, "member")
         .await
         .unwrap();
 
@@ -113,7 +109,7 @@ async fn create_user_as_member_returns_403() {
 #[serial]
 async fn list_users_returns_200() {
     let pool = common::setup_test_db().await;
-    let (org_id, _admin_id) = seed_org_and_admin(&pool).await;
+    let (org_id, _admin_id) = seed_org_and_owner(&pool).await;
 
     let app = build_test_app(pool);
 

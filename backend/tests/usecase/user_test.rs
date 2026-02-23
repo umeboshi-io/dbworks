@@ -1,6 +1,9 @@
 use crate::common;
-use dbworks_backend::domain::repository::{OrganizationRepository, UserRepository};
+use dbworks_backend::domain::repository::{
+    OrganizationMemberRepository, OrganizationRepository, UserRepository,
+};
 use dbworks_backend::domain::user::AppUser;
+use dbworks_backend::infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
 use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
 use dbworks_backend::infrastructure::database::user_repo::PgUserRepository;
 use dbworks_backend::usecase::{self, UsecaseError};
@@ -12,20 +15,32 @@ struct TestFixture {
     admin: AppUser,
     member: AppUser,
     user_repo: PgUserRepository,
+    org_member_repo: PgOrganizationMemberRepository,
 }
 
 async fn setup() -> TestFixture {
     let pool = common::setup_test_db().await;
     let org_repo = PgOrganizationRepository::new(pool.clone());
-    let user_repo = PgUserRepository::new(pool);
+    let user_repo = PgUserRepository::new(pool.clone());
+    let org_member_repo = PgOrganizationMemberRepository::new(pool);
 
     let org = org_repo.create("Test Org").await.unwrap();
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
+        .await
+        .unwrap();
+
+    // Add users to org
+    org_member_repo
+        .add_member(&org.id, &admin.id, "owner")
+        .await
+        .unwrap();
+    org_member_repo
+        .add_member(&org.id, &member.id, "member")
         .await
         .unwrap();
 
@@ -34,6 +49,7 @@ async fn setup() -> TestFixture {
         admin,
         member,
         user_repo,
+        org_member_repo,
     }
 }
 
@@ -44,6 +60,7 @@ async fn create_user_as_super_admin() {
 
     let user = usecase::user::create_user(
         &f.user_repo,
+        &f.org_member_repo,
         &f.admin,
         &f.org_id,
         "Alice",
@@ -56,7 +73,6 @@ async fn create_user_as_super_admin() {
     assert_eq!(user.name, "Alice");
     assert_eq!(user.email, "alice@test.com");
     assert_eq!(user.role, "member");
-    assert_eq!(user.organization_id, Some(f.org_id));
 }
 
 #[tokio::test]
@@ -66,6 +82,7 @@ async fn create_user_as_member_forbidden() {
 
     let result = usecase::user::create_user(
         &f.user_repo,
+        &f.org_member_repo,
         &f.member,
         &f.org_id,
         "Alice",

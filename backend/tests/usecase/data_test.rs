@@ -47,19 +47,19 @@ async fn setup() -> TestFixture {
     let org = org_repo.create("Test Org").await.unwrap();
 
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
     let owner = user_repo
-        .create(&org.id, "Owner", "owner@test.com", "member")
+        .create("Owner", "owner@test.com", "member")
         .await
         .unwrap();
     let reader = user_repo
-        .create(&org.id, "Reader", "reader@test.com", "member")
+        .create("Reader", "reader@test.com", "member")
         .await
         .unwrap();
     let no_perm_user = user_repo
-        .create(&org.id, "NoPerm", "noperm@test.com", "member")
+        .create("NoPerm", "noperm@test.com", "member")
         .await
         .unwrap();
 

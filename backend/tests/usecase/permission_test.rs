@@ -1,17 +1,20 @@
 use crate::common;
 use dbworks_backend::domain::connection::ConnectionInfo;
 use dbworks_backend::domain::repository::{
-    ConnectionRepository, GroupRepository, OrganizationRepository, UserRepository,
+    ConnectionRepository, GroupRepository, OrganizationMemberRepository, OrganizationRepository,
+    UserRepository,
 };
 use dbworks_backend::domain::user::AppUser;
 use dbworks_backend::infrastructure::crypto::Encryptor;
 use dbworks_backend::infrastructure::database::connection_repo::PgConnectionRepository;
 use dbworks_backend::infrastructure::database::group_repo::PgGroupRepository;
+use dbworks_backend::infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
 use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
 use dbworks_backend::infrastructure::database::permission_repo::PgPermissionRepository;
 use dbworks_backend::infrastructure::database::user_repo::PgUserRepository;
 use dbworks_backend::usecase::{self, UsecaseError};
 use serial_test::serial;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[allow(dead_code)]
@@ -23,6 +26,8 @@ struct TestFixture {
     org_id: Uuid,
     permission_repo: PgPermissionRepository,
     group_repo: PgGroupRepository,
+    org_member_repo: Arc<PgOrganizationMemberRepository>,
+    conn_repo: Arc<PgConnectionRepository>,
 }
 
 async fn setup() -> TestFixture {
@@ -31,6 +36,7 @@ async fn setup() -> TestFixture {
     let user_repo = PgUserRepository::new(pool.clone());
     let group_repo = PgGroupRepository::new(pool.clone());
     let permission_repo = PgPermissionRepository::new(pool.clone());
+    let org_member_repo = Arc::new(PgOrganizationMemberRepository::new(pool.clone()));
 
     unsafe {
         std::env::set_var(
@@ -39,20 +45,32 @@ async fn setup() -> TestFixture {
         );
     }
     let enc = Encryptor::from_env().unwrap();
-    let conn_repo = PgConnectionRepository::new(pool, enc);
+    let conn_repo = Arc::new(PgConnectionRepository::new(pool, enc));
 
     let org = org_repo.create("Test Org").await.unwrap();
 
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "member")
         .await
         .unwrap();
+    // Make admin an org owner
+    org_member_repo
+        .add_member(&org.id, &admin.id, "owner")
+        .await
+        .unwrap();
+
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
+    // Make member an org member (not owner)
+    org_member_repo
+        .add_member(&org.id, &member.id, "member")
+        .await
+        .unwrap();
+
     let other = user_repo
-        .create(&org.id, "Other", "other@test.com", "member")
+        .create("Other", "other@test.com", "member")
         .await
         .unwrap();
 
@@ -81,6 +99,8 @@ async fn setup() -> TestFixture {
         org_id: org.id,
         permission_repo,
         group_repo,
+        org_member_repo,
+        conn_repo,
     }
 }
 
@@ -90,11 +110,13 @@ async fn setup() -> TestFixture {
 
 #[tokio::test]
 #[serial]
-async fn grant_user_connection_permission_as_admin() {
+async fn grant_user_connection_permission_as_org_owner() {
     let f = setup().await;
 
     let perm = usecase::permission::grant_user_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -116,6 +138,8 @@ async fn grant_user_connection_permission_as_member_forbidden() {
 
     let result = usecase::permission::grant_user_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.member,
         &f.conn_id,
         &f.other.id,
@@ -134,6 +158,8 @@ async fn revoke_user_connection_permission_found() {
 
     usecase::permission::grant_user_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -145,6 +171,8 @@ async fn revoke_user_connection_permission_found() {
 
     usecase::permission::revoke_user_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -152,7 +180,6 @@ async fn revoke_user_connection_permission_found() {
     .await
     .unwrap();
 
-    // Verify it's gone
     let list =
         usecase::permission::list_user_connection_permissions(&f.permission_repo, &f.conn_id)
             .await
@@ -167,6 +194,8 @@ async fn revoke_user_connection_permission_not_found() {
 
     let result = usecase::permission::revoke_user_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -183,6 +212,8 @@ async fn list_user_connection_permissions_via_usecase() {
 
     usecase::permission::grant_user_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -212,6 +243,8 @@ async fn grant_user_table_permission_via_usecase() {
 
     let perm = usecase::permission::grant_user_table_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -232,6 +265,8 @@ async fn revoke_user_table_permission_not_found() {
 
     let result = usecase::permission::revoke_user_table_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &f.other.id,
@@ -255,6 +290,8 @@ async fn grant_group_connection_permission_via_usecase() {
 
     let perm = usecase::permission::grant_group_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &group.id,
@@ -277,6 +314,8 @@ async fn revoke_group_connection_permission_not_found() {
 
     let result = usecase::permission::revoke_group_connection_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &group.id,
@@ -299,6 +338,8 @@ async fn grant_group_table_permission_via_usecase() {
 
     let perm = usecase::permission::grant_group_table_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &group.id,
@@ -321,6 +362,8 @@ async fn revoke_group_table_permission_not_found() {
 
     let result = usecase::permission::revoke_group_table_permission(
         &f.permission_repo,
+        &*f.org_member_repo,
+        &*f.conn_repo,
         &f.admin,
         &f.conn_id,
         &group.id,

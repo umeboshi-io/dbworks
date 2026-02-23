@@ -1,5 +1,9 @@
 use std::fmt;
 
+use uuid::Uuid;
+
+use crate::domain::repository::{ConnectionRepository, OrganizationMemberRepository};
+
 /// Domain-level errors returned by usecases.
 /// Handlers map these to HTTP status codes.
 #[derive(Debug)]
@@ -25,69 +29,63 @@ impl fmt::Display for UsecaseError {
 
 impl std::error::Error for UsecaseError {}
 
-/// Helper: check that the caller has `super_admin` role.
-pub(crate) fn require_super_admin(
-    caller: &crate::domain::user::AppUser,
+/// Check that the caller is an `owner` of the given organization.
+pub(crate) async fn require_org_owner(
+    org_member_repo: &dyn OrganizationMemberRepository,
+    user_id: &Uuid,
+    org_id: &Uuid,
 ) -> Result<(), UsecaseError> {
-    if caller.role != "super_admin" {
-        return Err(UsecaseError::Forbidden(
-            "SuperAdmin role required".to_string(),
-        ));
+    let role = org_member_repo
+        .get_role(org_id, user_id)
+        .await
+        .map_err(|e| UsecaseError::Internal(e.to_string()))?;
+    match role.as_deref() {
+        Some("owner") => Ok(()),
+        _ => Err(UsecaseError::Forbidden(
+            "Organization owner role required".to_string(),
+        )),
     }
-    Ok(())
+}
+
+/// Check that the caller can administer a connection.
+/// For org connections: caller must be `owner` of the org.
+/// For personal connections: caller must be the `owner_user_id`.
+pub(crate) async fn require_conn_owner(
+    org_member_repo: &dyn OrganizationMemberRepository,
+    conn_repo: &dyn ConnectionRepository,
+    caller_id: &Uuid,
+    conn_id: &Uuid,
+) -> Result<(), UsecaseError> {
+    let ownership = conn_repo
+        .get_ownership(conn_id)
+        .await
+        .map_err(|e| UsecaseError::Internal(e.to_string()))?;
+
+    match ownership {
+        None => Err(UsecaseError::NotFound("Connection not found".to_string())),
+        Some((Some(org_id), _)) => {
+            // Org connection: require org owner
+            require_org_owner(org_member_repo, caller_id, &org_id).await
+        }
+        Some((None, Some(owner_id))) => {
+            // Personal connection: require owner_user_id match
+            if &owner_id == caller_id {
+                Ok(())
+            } else {
+                Err(UsecaseError::Forbidden(
+                    "Only the connection owner can manage this connection".to_string(),
+                ))
+            }
+        }
+        Some((None, None)) => Err(UsecaseError::Forbidden(
+            "Connection has no ownership info".to_string(),
+        )),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::user::AppUser;
-    use uuid::Uuid;
-
-    fn make_user(role: &str) -> AppUser {
-        AppUser {
-            id: Uuid::new_v4(),
-            organization_id: None,
-            name: "Test".to_string(),
-            email: "test@example.com".to_string(),
-            role: role.to_string(),
-            auth_provider: None,
-            provider_id: None,
-            avatar_url: None,
-            created_at: None,
-            updated_at: None,
-        }
-    }
-
-    #[test]
-    fn require_super_admin_passes() {
-        let user = make_user("super_admin");
-        assert!(require_super_admin(&user).is_ok());
-    }
-
-    #[test]
-    fn require_super_admin_rejects_member() {
-        let user = make_user("member");
-        let err = require_super_admin(&user).unwrap_err();
-        assert!(matches!(err, UsecaseError::Forbidden(_)));
-    }
-
-    #[test]
-    fn require_super_admin_rejects_admin() {
-        let user = make_user("admin");
-        assert!(matches!(
-            require_super_admin(&user).unwrap_err(),
-            UsecaseError::Forbidden(_)
-        ));
-    }
-
-    #[test]
-    fn require_super_admin_rejects_empty() {
-        let user = make_user("");
-        assert!(matches!(
-            require_super_admin(&user).unwrap_err(),
-            UsecaseError::Forbidden(_)
-        ));
-    }
 
     #[test]
     fn display_variants() {

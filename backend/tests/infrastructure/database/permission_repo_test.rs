@@ -40,12 +40,12 @@ async fn setup() -> TestFixture {
     let org = org_repo.create("Test Org").await.unwrap();
 
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
 
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
 
@@ -343,7 +343,7 @@ async fn resolve_connection_permission_user_level() {
     // Create a second user who is NOT the owner
     let other = f
         .user_repo
-        .create(&f.org.id, "Other", "other@test.com", "member")
+        .create("Other", "other@test.com", "member")
         .await
         .unwrap();
 
@@ -384,7 +384,7 @@ async fn resolve_connection_permission_group_level() {
     // Create a user with no direct permission
     let user = f
         .user_repo
-        .create(&f.org.id, "GroupUser", "groupuser@test.com", "member")
+        .create("GroupUser", "groupuser@test.com", "member")
         .await
         .unwrap();
 
@@ -435,7 +435,7 @@ async fn resolve_table_permission_with_table_override() {
     // Create user with connection-level write + all_tables
     let user = f
         .user_repo
-        .create(&f.org.id, "TableUser", "tableuser@test.com", "member")
+        .create("TableUser", "tableuser@test.com", "member")
         .await
         .unwrap();
 

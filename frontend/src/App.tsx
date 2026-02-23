@@ -17,7 +17,29 @@ function App() {
   const { user, isLoading, logout } = useAuth();
   const { t } = useTranslation();
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [openTabs, setOpenTabs] = useState<Connection[]>([]);
+  const [scope, setScope] = useState<Scope>(
+    () => (sessionStorage.getItem('dbw:scope') as Scope) || 'personal'
+  );
+  const [scopedTabs, setScopedTabs] = useState<Record<string, Connection[]>>(
+    () => {
+      const saved = sessionStorage.getItem('dbw:scopedTabs');
+      return saved ? JSON.parse(saved) : {};
+    }
+  );
+  const openTabs = scopedTabs[scope] || [];
+  const setOpenTabs = (updater: Connection[] | ((prev: Connection[]) => Connection[])) => {
+    setScopedTabs((prev) => {
+      const current = prev[scope] || [];
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      return { ...prev, [scope]: next };
+    });
+  };
+  const [scopedActiveConnId, setScopedActiveConnId] = useState<Record<string, string | null>>(
+    () => {
+      const saved = sessionStorage.getItem('dbw:scopedActiveConnId');
+      return saved ? JSON.parse(saved) : {};
+    }
+  );
   const [activeConnection, setActiveConnection] = useState<Connection | null>(null);
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [activeTable, setActiveTable] = useState<string | null>(
@@ -30,9 +52,6 @@ function App() {
   const [showConnModal, setShowConnModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [tablesOpen, setTablesOpen] = useState(true);
-  const [scope, setScope] = useState<Scope>(
-    () => (sessionStorage.getItem('dbw:scope') as Scope) || 'personal'
-  );
 
   // Skip sessionStorage saves until initial restore is complete
   const restoredRef = useRef(false);
@@ -51,10 +70,17 @@ function App() {
     if (!restoredRef.current) return;
     if (activeConnection) {
       sessionStorage.setItem('dbw:activeConnId', activeConnection.id);
+      setScopedActiveConnId((prev) => ({ ...prev, [scope]: activeConnection.id }));
     } else {
       sessionStorage.removeItem('dbw:activeConnId');
+      setScopedActiveConnId((prev) => ({ ...prev, [scope]: null }));
     }
-  }, [activeConnection]);
+  }, [activeConnection, scope]);
+
+  useEffect(() => {
+    if (!restoredRef.current) return;
+    sessionStorage.setItem('dbw:scopedActiveConnId', JSON.stringify(scopedActiveConnId));
+  }, [scopedActiveConnId]);
 
   useEffect(() => {
     if (!restoredRef.current) return;
@@ -63,32 +89,32 @@ function App() {
 
   useEffect(() => {
     if (!restoredRef.current) return;
-    const tabIds = openTabs.map((t) => t.id);
-    sessionStorage.setItem('dbw:openTabIds', JSON.stringify(tabIds));
-  }, [openTabs]);
+    sessionStorage.setItem('dbw:scopedTabs', JSON.stringify(scopedTabs));
+  }, [scopedTabs]);
 
   const loadConnections = useCallback(async (s: Scope) => {
     try {
       const data = await api.listConnections(s);
       setConnections(data);
 
-      // Restore open tabs and active connection from session
+      // Restore active connection from session
       if (!restoredRef.current) {
         restoredRef.current = true;
-        const savedTabIds = sessionStorage.getItem('dbw:openTabIds');
         const savedActiveId = sessionStorage.getItem('dbw:activeConnId');
 
-        if (savedTabIds) {
-          const ids: string[] = JSON.parse(savedTabIds);
-          const restored = ids
-            .map((id) => data.find((c: Connection) => c.id === id))
+        // Restore open tabs for current scope from scopedTabs
+        const currentScopeTabs = scopedTabs[s] || [];
+        if (currentScopeTabs.length > 0) {
+          // Re-validate tabs against loaded connections
+          const validTabs = currentScopeTabs
+            .map((tab: Connection) => data.find((c: Connection) => c.id === tab.id))
             .filter(Boolean) as Connection[];
-          if (restored.length > 0) {
-            setOpenTabs(restored);
-            if (savedActiveId) {
-              const active = restored.find((c) => c.id === savedActiveId);
-              if (active) setActiveConnection(active);
-            }
+          if (validTabs.length !== currentScopeTabs.length) {
+            setOpenTabs(validTabs);
+          }
+          if (savedActiveId) {
+            const active = validTabs.find((c) => c.id === savedActiveId);
+            if (active) setActiveConnection(active);
           }
         }
       }
@@ -165,9 +191,18 @@ function App() {
 
   const handleScopeChange = (newScope: Scope) => {
     setScope(newScope);
-    setActiveConnection(null);
     setActiveTable(null);
-    setOpenTabs([]);
+    setTables([]);
+
+    // Restore last active connection for the new scope
+    const lastActiveId = scopedActiveConnId[newScope];
+    const newScopeTabs = scopedTabs[newScope] || [];
+    if (lastActiveId) {
+      const restored = newScopeTabs.find((c) => c.id === lastActiveId) || null;
+      setActiveConnection(restored);
+    } else {
+      setActiveConnection(null);
+    }
   };
 
   const dbIcon = (dbType?: string, size = 16) =>
@@ -222,6 +257,7 @@ function App() {
         </div>
 
         <div className="conn-topbar-right">
+          <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
           <LanguageSelector />
           <button
             className="conn-manager-btn"
@@ -326,6 +362,7 @@ function App() {
           {!showOrgPage && showConnectionForm && selectedDbType && (
             <ConnectionPage
               dbType={selectedDbType}
+              scope={scope}
               onCreated={handleConnectionCreated}
               onCancel={() => { setShowConnectionForm(false); setSelectedDbType(null); }}
               onBack={() => { setShowConnectionForm(false); setShowDbTypeSelect(true); }}
@@ -385,9 +422,6 @@ function App() {
               <button className="modal-close" onClick={() => setShowConnModal(false)}>×</button>
             </div>
 
-            <div className="modal-scope">
-              <OrgSelector currentScope={scope} onScopeChange={handleScopeChange} />
-            </div>
 
             <div className="modal-body">
               {connections.length === 0 ? (

@@ -13,7 +13,6 @@ export interface CreateOrganizationRequest {
 // ---- User ----
 export interface AppUser {
   id: string;
-  organization_id: string;
   name: string;
   email: string;
   role: string;
@@ -54,6 +53,7 @@ export interface ConnectionRequest {
   database: string;
   user: string;
   password: string;
+  scope?: string;
   organization_id?: string;
 }
 

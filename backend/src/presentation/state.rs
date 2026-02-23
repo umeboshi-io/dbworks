@@ -7,8 +7,8 @@ use sqlx::PgPool;
 
 use crate::domain::connection::ConnectionInfo;
 use crate::domain::repository::{
-    ConnectionRepository, GroupRepository, OrganizationRepository, PermissionRepository,
-    UserRepository,
+    ConnectionRepository, GroupRepository, OrganizationMemberRepository, OrganizationRepository,
+    PermissionRepository, UserRepository,
 };
 use crate::infrastructure::auth::oauth::OAuthClients;
 use crate::infrastructure::crypto::Encryptor;
@@ -25,6 +25,8 @@ pub struct AppStateInner {
     pub user_repo: Arc<dyn UserRepository>,
     pub group_repo: Arc<dyn GroupRepository>,
     pub permission_repo: Arc<dyn PermissionRepository>,
+    pub org_member_repo: Arc<dyn OrganizationMemberRepository>,
+    pub conn_repo: Arc<dyn ConnectionRepository>,
 }
 
 pub type AppState = Arc<AppStateInner>;

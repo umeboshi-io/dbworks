@@ -29,7 +29,7 @@ pub async fn create_connection(
         _ => 5432,
     };
     let port = req.port.unwrap_or(default_port);
-    tracing::info!(name = %req.name, db_type = %req.db_type, host = %req.host, port = port, database = %req.database, "POST /api/connections");
+    tracing::info!(name = %req.name, db_type = %req.db_type, host = %req.host, port = port, database = %req.database, scope = ?req.scope, "POST /api/connections");
 
     let caller = match get_current_user(&*state.user_repo, &state.jwt_secret, &headers).await {
         Ok(u) => u,
@@ -38,8 +38,24 @@ pub async fn create_connection(
         }
     };
 
+    // Parse scope to determine organization_id
+    let organization_id = match req.scope.as_deref() {
+        Some(s) if s.starts_with("org:") => match Uuid::parse_str(&s[4..]) {
+            Ok(id) => Some(id),
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({ "error": "Invalid org id in scope" })),
+                )
+                    .into_response();
+            }
+        },
+        _ => None,
+    };
+
     match usecase::connection::create_connection(
         &state.connection_manager,
+        &*state.org_member_repo,
         &caller,
         req.name,
         req.db_type,
@@ -48,6 +64,7 @@ pub async fn create_connection(
         req.database,
         req.user,
         req.password,
+        organization_id,
     )
     .await
     {
@@ -99,7 +116,14 @@ pub async fn delete_connection(
         }
     };
 
-    match usecase::connection::delete_connection(&state.connection_manager, &caller, &conn_id).await
+    match usecase::connection::delete_connection(
+        &state.connection_manager,
+        &*state.org_member_repo,
+        &*state.conn_repo,
+        &caller,
+        &conn_id,
+    )
+    .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => into_response(e),

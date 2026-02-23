@@ -35,6 +35,19 @@ impl OrganizationRepository for PgOrganizationRepository {
         Ok(orgs)
     }
 
+    async fn list_by_user(&self, user_id: &Uuid) -> anyhow::Result<Vec<Organization>> {
+        let orgs = sqlx::query_as::<_, Organization>(
+            r#"SELECT o.* FROM organizations o
+               INNER JOIN organization_members om ON o.id = om.organization_id
+               WHERE om.user_id = $1
+               ORDER BY o.created_at"#,
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(orgs)
+    }
+
     async fn get(&self, id: &Uuid) -> anyhow::Result<Option<Organization>> {
         let org = sqlx::query_as::<_, Organization>("SELECT * FROM organizations WHERE id = $1")
             .bind(id)

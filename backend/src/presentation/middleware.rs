@@ -1,7 +1,4 @@
-use axum::{
-    Json,
-    http::{HeaderMap, StatusCode},
-};
+use axum::http::{HeaderMap, StatusCode};
 use uuid::Uuid;
 
 use crate::domain::repository::UserRepository;
@@ -46,60 +43,4 @@ pub async fn get_current_user(
     headers: &HeaderMap,
 ) -> Result<AppUser, StatusCode> {
     authenticate_user(user_repo, jwt_secret, headers).await
-}
-
-pub fn require_super_admin(user: &AppUser) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
-    if user.role != "super_admin" {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(serde_json::json!({ "error": "SuperAdmin role required" })),
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use uuid::Uuid;
-
-    fn make_user(role: &str) -> AppUser {
-        AppUser {
-            id: Uuid::new_v4(),
-            organization_id: None,
-            name: "Test User".to_string(),
-            email: "test@example.com".to_string(),
-            role: role.to_string(),
-            auth_provider: None,
-            provider_id: None,
-            avatar_url: None,
-            created_at: None,
-            updated_at: None,
-        }
-    }
-
-    #[test]
-    fn super_admin_passes() {
-        let user = make_user("super_admin");
-        assert!(require_super_admin(&user).is_ok());
-    }
-
-    #[test]
-    fn member_is_rejected() {
-        let user = make_user("member");
-        let err = require_super_admin(&user).unwrap_err();
-        assert_eq!(err.0, StatusCode::FORBIDDEN);
-    }
-
-    #[test]
-    fn admin_is_rejected() {
-        let user = make_user("admin");
-        assert!(require_super_admin(&user).is_err());
-    }
-
-    #[test]
-    fn empty_role_is_rejected() {
-        let user = make_user("");
-        assert!(require_super_admin(&user).is_err());
-    }
 }

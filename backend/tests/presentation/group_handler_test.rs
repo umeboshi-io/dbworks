@@ -1,34 +1,20 @@
 use crate::common;
-use crate::presentation::helpers::build_test_app;
+use crate::presentation::helpers::{build_test_app, seed_org_and_owner};
 
-use dbworks_backend::domain::repository::{
-    GroupRepository, OrganizationRepository, UserRepository,
-};
+use dbworks_backend::domain::repository::GroupRepository;
+use dbworks_backend::domain::repository::UserRepository;
 use dbworks_backend::infrastructure::database::group_repo::PgGroupRepository;
-use dbworks_backend::infrastructure::database::organization_repo::PgOrganizationRepository;
 use dbworks_backend::infrastructure::database::user_repo::PgUserRepository;
 use http::Request;
 use http_body_util::BodyExt;
 use serial_test::serial;
 use tower::ServiceExt;
 
-/// Seed org + super_admin and return (org_id, admin_id).
-async fn seed(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
-    let org_repo = PgOrganizationRepository::new(pool.clone());
-    let user_repo = PgUserRepository::new(pool.clone());
-    let org = org_repo.create("Org").await.unwrap();
-    let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
-        .await
-        .unwrap();
-    (org.id, admin.id)
-}
-
 #[tokio::test]
 #[serial]
 async fn create_group_returns_201() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
     let app = build_test_app(pool);
 
     let body = serde_json::json!({ "name": "Dev Team", "description": "Developers" });
@@ -52,7 +38,7 @@ async fn create_group_returns_201() {
 #[serial]
 async fn list_groups_returns_200() {
     let pool = common::setup_test_db().await;
-    let (org_id, _) = seed(&pool).await;
+    let (org_id, _) = seed_org_and_owner(&pool).await;
 
     let group_repo = PgGroupRepository::new(pool.clone());
     group_repo.create(&org_id, "G1", None).await.unwrap();
@@ -77,14 +63,14 @@ async fn list_groups_returns_200() {
 #[serial]
 async fn add_group_member_returns_204() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     let group_repo = PgGroupRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
 
     let group = group_repo.create(&org_id, "Team", None).await.unwrap();
     let member = user_repo
-        .create(&org_id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
 
@@ -107,14 +93,14 @@ async fn add_group_member_returns_204() {
 #[serial]
 async fn remove_group_member_returns_204() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     let group_repo = PgGroupRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
 
     let group = group_repo.create(&org_id, "Team", None).await.unwrap();
     let member = user_repo
-        .create(&org_id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
     group_repo.add_member(&group.id, &member.id).await.unwrap();
@@ -136,7 +122,7 @@ async fn remove_group_member_returns_204() {
 #[serial]
 async fn remove_nonexistent_member_returns_404() {
     let pool = common::setup_test_db().await;
-    let (org_id, admin_id) = seed(&pool).await;
+    let (org_id, admin_id) = seed_org_and_owner(&pool).await;
 
     let group_repo = PgGroupRepository::new(pool.clone());
     let group = group_repo.create(&org_id, "Team", None).await.unwrap();
@@ -162,7 +148,7 @@ async fn remove_nonexistent_member_returns_404() {
 #[serial]
 async fn list_group_members_returns_200() {
     let pool = common::setup_test_db().await;
-    let (org_id, _) = seed(&pool).await;
+    let (org_id, _) = seed_org_and_owner(&pool).await;
 
     let group_repo = PgGroupRepository::new(pool.clone());
     let group = group_repo.create(&org_id, "Team", None).await.unwrap();
