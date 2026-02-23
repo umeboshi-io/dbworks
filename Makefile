@@ -1,4 +1,4 @@
-.PHONY: help up down db db-reset backend frontend dev build clean lint
+.PHONY: help up down db db-reset backend frontend dev build clean lint e2e-install e2e-test e2e-test-headed e2e-test-ui e2e-report
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -59,6 +59,24 @@ frontend-install: ## Install frontend dependencies
 	cd frontend && npm install
 
 # ---------------------------------------------------------------------------
+# E2E Tests (Playwright)
+# ---------------------------------------------------------------------------
+e2e-install: ## Install E2E test dependencies
+	cd e2e && npm install && npx playwright install chromium
+
+e2e-test: ## Run E2E tests (requires `make dev` running)
+	cd e2e && npx playwright test
+
+e2e-test-headed: ## Run E2E tests in headed mode
+	cd e2e && npx playwright test --headed
+
+e2e-test-ui: ## Run E2E tests with Playwright UI
+	cd e2e && npx playwright test --ui
+
+e2e-report: ## Show last E2E test report
+	cd e2e && npx playwright show-report
+
+# ---------------------------------------------------------------------------
 # Combined
 # ---------------------------------------------------------------------------
 dev: up ## Start all services (DB + backend + frontend)
@@ -75,3 +93,4 @@ lint: backend-lint frontend-lint ## Lint both backend and frontend
 clean: ## Clean build artifacts
 	cd backend && cargo clean
 	rm -rf frontend/dist
+
