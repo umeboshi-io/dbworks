@@ -165,6 +165,9 @@ function App() {
 
   const handleScopeChange = (newScope: Scope) => {
     setScope(newScope);
+    setActiveConnection(null);
+    setActiveTable(null);
+    setTables([]);
   };
 
   const dbIcon = (dbType?: string, size = 16) =>
