@@ -13,7 +13,6 @@ fn jwt_roundtrip_smoke_test() {
         name: "Test User".to_string(),
         auth_provider: Some("google".to_string()),
         provider_id: Some("12345".to_string()),
-        organization_id: None,
         role: "member".to_string(),
         avatar_url: None,
         created_at: None,

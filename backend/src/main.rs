@@ -10,6 +10,7 @@ use infrastructure::auth::oauth::OAuthClients;
 use infrastructure::crypto::Encryptor;
 use infrastructure::database::connection_repo::PgConnectionRepository;
 use infrastructure::database::group_repo::PgGroupRepository;
+use infrastructure::database::organization_member_repo::PgOrganizationMemberRepository;
 use infrastructure::database::organization_repo::PgOrganizationRepository;
 use infrastructure::database::permission_repo::PgPermissionRepository;
 use infrastructure::database::user_repo::PgUserRepository;
@@ -75,6 +76,7 @@ async fn main() {
     let user_repo = Arc::new(PgUserRepository::new(pool.clone()));
     let group_repo = Arc::new(PgGroupRepository::new(pool.clone()));
     let permission_repo = Arc::new(PgPermissionRepository::new(pool.clone()));
+    let org_member_repo = Arc::new(PgOrganizationMemberRepository::new(pool.clone()));
     let connection_repo: Option<
         Arc<dyn dbworks_backend::domain::repository::ConnectionRepository>,
     > = encryptor
@@ -122,6 +124,7 @@ async fn main() {
         user_repo,
         group_repo,
         permission_repo,
+        org_member_repo,
     });
 
     let cors = CorsLayer::new()

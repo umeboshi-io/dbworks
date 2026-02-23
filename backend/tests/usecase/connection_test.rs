@@ -56,15 +56,15 @@ async fn setup() -> TestFixture {
     let enc = test_encryptor();
     let conn_repo = PgConnectionRepository::new(pool.clone(), enc.clone());
 
-    let org = org_repo.create("Test Org").await.unwrap();
+    let _org = org_repo.create("Test Org").await.unwrap();
 
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
 
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
 

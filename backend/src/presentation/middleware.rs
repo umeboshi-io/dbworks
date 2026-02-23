@@ -66,7 +66,6 @@ mod tests {
     fn make_user(role: &str) -> AppUser {
         AppUser {
             id: Uuid::new_v4(),
-            organization_id: None,
             name: "Test User".to_string(),
             email: "test@example.com".to_string(),
             role: role.to_string(),

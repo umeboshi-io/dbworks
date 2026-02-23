@@ -17,7 +17,7 @@ async fn seed(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
     let user_repo = PgUserRepository::new(pool.clone());
     let org = org_repo.create("Org").await.unwrap();
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
     (org.id, admin.id)
@@ -31,7 +31,7 @@ async fn grant_user_conn_permission_returns_201() {
 
     let user_repo = PgUserRepository::new(pool.clone());
     let target = user_repo
-        .create(&org_id, "Target", "target@test.com", "member")
+        .create("Target", "target@test.com", "member")
         .await
         .unwrap();
 
@@ -69,9 +69,9 @@ async fn grant_user_conn_permission_as_member_returns_403() {
     let org_repo = PgOrganizationRepository::new(pool.clone());
     let user_repo = PgUserRepository::new(pool.clone());
 
-    let org = org_repo.create("Org").await.unwrap();
+    let _org = org_repo.create("Org").await.unwrap();
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
 
@@ -147,7 +147,7 @@ async fn grant_and_revoke_user_conn_permission() {
     let user_repo = PgUserRepository::new(pool.clone());
     let permission_repo = PgPermissionRepository::new(pool.clone());
     let target = user_repo
-        .create(&org_id, "Target", "target@test.com", "member")
+        .create("Target", "target@test.com", "member")
         .await
         .unwrap();
 

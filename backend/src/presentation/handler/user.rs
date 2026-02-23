@@ -29,6 +29,7 @@ pub async fn create_user(
 
     match usecase::user::create_user(
         &*state.user_repo,
+        &*state.org_member_repo,
         &caller,
         &org_id,
         &req.name,

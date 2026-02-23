@@ -500,12 +500,10 @@ async fn find_or_create_user(
     }
 
     // 2. Try to find by email — link account
-    let by_email = sqlx::query_as::<_, AppUser>(
-        "SELECT * FROM app_users WHERE email = $1 AND organization_id IS NULL",
-    )
-    .bind(email)
-    .fetch_optional(pool)
-    .await?;
+    let by_email = sqlx::query_as::<_, AppUser>("SELECT * FROM app_users WHERE email = $1")
+        .bind(email)
+        .fetch_optional(pool)
+        .await?;
 
     if let Some(user) = by_email {
         // Link OAuth provider to existing user

@@ -44,15 +44,15 @@ async fn setup() -> TestFixture {
     let org = org_repo.create("Test Org").await.unwrap();
 
     let admin = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
     let other = user_repo
-        .create(&org.id, "Other", "other@test.com", "member")
+        .create("Other", "other@test.com", "member")
         .await
         .unwrap();
 

@@ -17,17 +17,10 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create(
-        &self,
-        org_id: &Uuid,
-        name: &str,
-        email: &str,
-        role: &str,
-    ) -> anyhow::Result<AppUser> {
+    async fn create(&self, name: &str, email: &str, role: &str) -> anyhow::Result<AppUser> {
         let user = sqlx::query_as::<_, AppUser>(
-            "INSERT INTO app_users (organization_id, name, email, role) VALUES ($1, $2, $3, $4) RETURNING *",
+            "INSERT INTO app_users (name, email, role) VALUES ($1, $2, $3) RETURNING *",
         )
-        .bind(org_id)
         .bind(name)
         .bind(email)
         .bind(role)
@@ -38,7 +31,10 @@ impl UserRepository for PgUserRepository {
 
     async fn list_by_org(&self, org_id: &Uuid) -> anyhow::Result<Vec<AppUser>> {
         let users = sqlx::query_as::<_, AppUser>(
-            "SELECT * FROM app_users WHERE organization_id = $1 ORDER BY created_at",
+            r#"SELECT u.* FROM app_users u
+               INNER JOIN organization_members om ON om.user_id = u.id
+               WHERE om.organization_id = $1
+               ORDER BY u.created_at"#,
         )
         .bind(org_id)
         .fetch_all(&self.pool)

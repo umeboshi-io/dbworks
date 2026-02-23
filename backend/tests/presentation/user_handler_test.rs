@@ -16,7 +16,7 @@ async fn seed_org_and_admin(pool: &sqlx::PgPool) -> (uuid::Uuid, uuid::Uuid) {
 
     let org = org_repo.create("Test Org").await.unwrap();
     let user = user_repo
-        .create(&org.id, "Admin", "admin@test.com", "super_admin")
+        .create("Admin", "admin@test.com", "super_admin")
         .await
         .unwrap();
     (org.id, user.id)
@@ -87,7 +87,7 @@ async fn create_user_as_member_returns_403() {
 
     let org = org_repo.create("Org").await.unwrap();
     let member = user_repo
-        .create(&org.id, "Member", "member@test.com", "member")
+        .create("Member", "member@test.com", "member")
         .await
         .unwrap();
 

@@ -272,8 +272,8 @@ impl PermissionRepository for PgPermissionRepository {
         let is_org_member = sqlx::query_scalar::<_, bool>(
             r#"SELECT EXISTS(
                 SELECT 1 FROM saved_connections sc
-                INNER JOIN users u ON u.organization_id = sc.organization_id
-                WHERE sc.id = $1 AND u.id = $2 AND sc.organization_id IS NOT NULL
+                INNER JOIN organization_members om ON om.organization_id = sc.organization_id
+                WHERE sc.id = $1 AND om.user_id = $2 AND sc.organization_id IS NOT NULL
             )"#,
         )
         .bind(conn_id)
