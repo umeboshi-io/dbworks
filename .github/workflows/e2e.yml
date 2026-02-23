@@ -1,0 +1,142 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            e2e:
+              - 'e2e/**'
+              - 'backend/**'
+              - 'frontend/**'
+              - '.github/workflows/e2e.yml'
+
+  e2e:
+    name: E2E (Playwright)
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:18.1-alpine
+        env:
+          POSTGRES_USER: dbworks
+          POSTGRES_PASSWORD: dbworks
+          POSTGRES_DB: dbworks_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dbworks"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://dbworks:dbworks@localhost:5432/dbworks_dev
+      ENCRYPTION_KEY: KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=
+      JWT_SECRET: dbworks-dev-secret-change-me
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # --- Backend ---
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            backend/target
+          key: ${{ runner.os }}-cargo-e2e-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-e2e-
+
+      - name: Build backend
+        working-directory: backend
+        run: cargo build --release
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          ./target/release/dbworks-backend &
+          # Wait for backend to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:3001/api/organizations > /dev/null 2>&1 && break
+            sleep 1
+          done
+
+      # --- Frontend ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Start frontend
+        working-directory: frontend
+        run: |
+          npm run dev &
+          # Wait for Vite to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:5173 > /dev/null 2>&1 && break
+            sleep 1
+          done
+
+      # --- Seed test data ---
+      - name: Seed E2E test user
+        run: |
+          PGPASSWORD=dbworks psql -h localhost -U dbworks -d dbworks_dev -c "
+            INSERT INTO app_users (id, name, email, role)
+            VALUES ('00000000-0000-0000-0000-e2e000000001', 'E2E Test User', 'e2e-test@dbworks.local', 'member')
+            ON CONFLICT (id) DO NOTHING;
+            INSERT INTO organizations (id, name)
+            VALUES ('00000000-0000-0000-0000-e2e000000002', 'E2E Test Org')
+            ON CONFLICT (id) DO NOTHING;
+            INSERT INTO organization_members (organization_id, user_id, role)
+            VALUES ('00000000-0000-0000-0000-e2e000000002', '00000000-0000-0000-0000-e2e000000001', 'owner')
+            ON CONFLICT (organization_id, user_id) DO NOTHING;
+          "
+
+      # --- E2E Tests ---
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
